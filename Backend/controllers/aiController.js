@@ -13,7 +13,7 @@ import Groq from "groq-sdk";
 // }
 
 const groq = new Groq({
-  apiKey: "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",
+  // apiKey: "",
 });
 
 const SYSTEM_PROMPT = `

@@ -1,16 +1,16 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Home from "./pages/Home";
-import Profile from "./pages/Profile";
-import Dictionary from "./pages/Dictionary";
-import Roadmaps from "./pages/Roadmaps";
-import Quiz from "./pages/Quiz";
-import AITeacher from "./pages/AITeacher";
-import DoubtSolver from "./pages/DoubtSolver";
-import History from "./pages/History";
-import Navbar from "./components/Navbar";
-import { useAuth } from "./contexts/AuthContext";
+import Login from "./pages/Login.jsx";
+import Register from "./pages/Register.jsx";
+import Home from "./pages/Home.jsx";
+import Profile from "./pages/Profile.jsx";
+import Dictionary from "./pages/Dictionary.jsx";
+import Roadmaps from "./pages/Roadmaps.jsx";
+import Quiz from "./pages/Quiz.jsx";
+import AITeacher from "./pages/AITeacher.jsx";
+import DoubtSolver from "./pages/DoubtSolver.jsx";
+import History from "./pages/History.jsx";
+import Navbar from "./components/Navbar.jsx";
+import { useAuth } from "./contexts/AuthContext.jsx";
 
 function App() {
   const { user, loading } = useAuth();
@@ -20,7 +20,7 @@ function App() {
   return (
     <Router>
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 py-6 min-h-screen bg-background font-japanese text-textPrimary">
+    <main className="min-h-screen w-full font-japanese text-text-primary">
         <Routes>
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
           <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
@@ -34,9 +34,13 @@ function App() {
           <Route path="/history" element={user ? <History /> : <Navigate to="/login" />} />
           {/* Add 404 or redirect as needed */}
         </Routes>
-      </div>
+      </main>
     </Router>
   );
 }
 
 export default App;
+
+// export default function App() {
+//   return <div className="max-w-8xl mx-auto px-4  bg-amber-300 py-6 min-h-screen bg-background-pink font-japanese text-textPrimary transition-colors">Sample text </div>
+//  }

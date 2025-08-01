@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import aiAPI from "../api/ai";
+import aiAPI from "../api/ai.js";
 
 export default function AITeacher() {
   const [question, setQuestion] = useState("");

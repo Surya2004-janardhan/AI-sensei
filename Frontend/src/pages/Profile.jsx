@@ -1,6 +1,6 @@
 import React, { useState  } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import authAPI from "../api/auth";
+import  {useAuth}  from "../contexts/AuthContext";
+import {updateProfile} from "../api/auth";
 
 export default function Profile() {
   const { user, logout } = useAuth();
@@ -14,7 +14,7 @@ export default function Profile() {
     setLoading(true);
     setMsg("");
     try {
-      const res = await authAPI.updateProfile({ name, jlptLevel });
+      const res = await updateProfile({ name, jlptLevel });
       console.log(res.data)
       setMsg("Profile updated successfully!");
     } catch (err) {

@@ -1,8 +1,5 @@
+// const { callAIGPT } = require("../services/aiService");
 import Groq from "groq-sdk";
-// import dotenv as ("dotenv")
-// import dotenv from "dotenv";
-// dotenv.config({ quiet: true });
-
 // console.log(process.env.GROQ_API_KEY);
 // const apiKey = process.env.GROQ_API_KEY?.replace(/(\r\n|\n|\r)/gm, "").trim();
 // console.log('apiKey: ', apiKey);
@@ -13,7 +10,7 @@ import Groq from "groq-sdk";
 // }
 
 const groq = new Groq({
-  // apiKey: "",
+  // apiKey: "process.env.GROQ_API_KEY",
 });
 
 const SYSTEM_PROMPT = `

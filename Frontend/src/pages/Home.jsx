@@ -26,13 +26,13 @@ export default function Home() {
         {/* Icons + Animated Paper Airplane */}
         <div className="flex justify-between items-center w-[360px] max-w-full mx-auto relative h-20">
           <IndiaMarker />
-          <div className="relative flex-1 flex items-center justify-center h-full">
+          <div className="  relative flex-1 flex items-center justify-center h-full ">
             {/* Animated Paper Airplane */}
             <span
-              className="absolute left-0 top-6"
+              className="absolute left-0 top-6 "
               style={{
-                animation: "paperplane-fly 5s linear infinite",
-                fontSize: "2.3rem",
+              animation: "paperplane-fly 7s ease-in-out infinite", // run once, smoother easing
+                fontSize: "2.5rem",
                 zIndex: 10,
               }}
               role="img"
@@ -52,15 +52,17 @@ export default function Home() {
         {/* Keyframes for the airplane */}
         <style>
           {`
-            @keyframes paperplane-fly {
-              0%   { left: 0px; top: 24px;  transform: rotate(-14deg);}
-              15%  { left: 42px; top: 12px;  transform: rotate(-9deg);}
-              35%  { left: 90px; top: 5px;   transform: rotate(3deg);}
-              55%  { left: 140px; top: 14px; transform: rotate(16deg);}
-              75%  { left: 205px; top: 25px; transform: rotate(9deg);}
-              90%  { left: 255px; top: 11px; transform: rotate(3deg);}
-              100% { left: 320px; top: 24px; transform: rotate(-11deg);}
-            }
+          @keyframes paperplane-fly {
+          0%   { left: -10px;  top: 19px; transform: rotate(-14deg); }
+          15%  { left: 32px;   top: 7px;  transform: rotate(-9deg); }
+          35%  { left: 75px;   top: 0px;  transform: rotate(3deg); }
+          55%  { left: 120px;  top: 9px;  transform: rotate(16deg); }
+          75%  { left: 180px;  top: 20px; transform: rotate(9deg); }
+          90%  { left: 230px;  top: 6px;  transform: rotate(3deg); }
+          100% { left: 260px;  top: 19px; transform: rotate(-11deg); }
+        }
+
+
           `}
         </style>
       </div>

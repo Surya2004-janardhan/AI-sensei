@@ -6,6 +6,7 @@ export default function AITeacher() {
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [history, setHistory] = useState([]); // To store previous Q&A pairs
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -14,9 +15,21 @@ export default function AITeacher() {
     setLoading(true);
     setError("");
     setAnswer("");
+
     try {
       const res = await aiAPI.askTeacher({ question });
-      setAnswer(res.data.answer);
+      const newAnswer = res.data.answer;
+
+      setAnswer(newAnswer);
+
+      // Add current Q&A to history, keep newest first
+      setHistory((prev) => [
+        { question: question.trim(), answer: newAnswer },
+        ...prev,
+      ]);
+
+      // Clear input for convenience
+      setQuestion("");
     } catch {
       setError("Failed to get answer from AI Teacher.");
     } finally {
@@ -25,11 +38,12 @@ export default function AITeacher() {
   };
 
   return (
-    <div className="min-h-screen bg-white px-6 py-12 max-w-4xl mx-auto font-sans text-black">
-      <h1 className="text-4xl font-extrabold font-serifJapanese text-black mb-10 text-center tracking-tight">
+    <div className="min-h-screen bg-white px-6 py-12 max-w-5xl mx-auto font-sans text-black">
+      <h1 className="text-4xl font-extrabold font-serifJapanese mb-10 text-center tracking-tight">
         AI Teacher
       </h1>
 
+      {/* Input area */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <textarea
           rows={5}
@@ -37,7 +51,7 @@ export default function AITeacher() {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           className="w-full p-5 border border-black/40 rounded-md resize-none text-black placeholder-black/60
-                     focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 transition"
+                      focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 transition"
           disabled={loading}
           aria-label="Input your Japanese language question"
         />
@@ -46,18 +60,12 @@ export default function AITeacher() {
           type="submit"
           disabled={loading || !question.trim()}
           className={`w-full py-3 rounded-md font-semibold tracking-wide text-white
-            transition-transform duration-150 ease-in-out focus-visible:outline-none 
-            focus-visible:ring-4 focus-visible:ring-black/70
-            ${
-              loading || !question.trim()
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-black hover:bg-gray-900 hover:scale-[1.03]"
-            }
-          `}
+           transition-transform duration-150 ease-in-out focus-visible:outline-none 
+           focus-visible:ring-4 focus-visible:ring-black/70
+           ${loading || !question.trim() ? "bg-gray-400 cursor-not-allowed" : "bg-black hover:bg-gray-900 hover:scale-[1.03]"}`}
           aria-busy={loading}
         >
           {loading ? (
-            // Simple spinner icon using SVG
             <svg
               className="animate-spin h-6 w-6 mx-auto"
               xmlns="http://www.w3.org/2000/svg"
@@ -85,12 +93,14 @@ export default function AITeacher() {
         </button>
       </form>
 
+      {/* Error message */}
       {error && (
         <p className="text-center mt-6 text-red-600 font-semibold" role="alert">
           {error}
         </p>
       )}
 
+      {/* Current answer section */}
       {answer && (
         <section
           className="mt-10 p-6 border border-black/20 rounded-lg bg-gray-50 shadow-md whitespace-pre-wrap text-black font-sans"
@@ -98,6 +108,33 @@ export default function AITeacher() {
         >
           <h2 className="text-2xl font-bold mb-3">Answer:</h2>
           <p>{answer}</p>
+        </section>
+      )}
+
+      {/* Previous questions and answers horizontally scrollable */}
+      {history.length > 0 && (
+        <section className="mt-16">
+          <h3 className="text-xl font-semibold mb-4 font-serifJapanese text-black">
+            Previous Questions
+          </h3>
+          <div
+            className="flex space-x-6 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-black/40 scrollbar-thumb-rounded-lg"
+            aria-label="Previous questions and answers"
+          >
+            {history.map(({ question: q, answer: a }, idx) => (
+              <div
+                key={idx}
+                className="flex-shrink-0 w-80 min-w-[320px] p-5 border border-black/20 rounded-lg bg-white shadow-sm hover:shadow-md transition"
+              >
+                <p className="font-semibold mb-3 text-black/90 truncate">
+                  <span className="font-serifJapanese">Q:</span> {q}
+                </p>
+                <div className="text-black/80 whitespace-pre-wrap text-sm max-h-32 overflow-y-auto">
+                  <span className="font-serifJapanese font-semibold">A:</span> {a}
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
       )}
     </div>

@@ -25,33 +25,80 @@ export default function AITeacher() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md font-japanese">
-      <h1 className="text-4xl font-serifJapanese text-primary mb-8">AI Teacher</h1>
-      <form onSubmit={handleSubmit}>
+    <div className="min-h-screen bg-white px-6 py-12 max-w-4xl mx-auto font-sans text-black">
+      <h1 className="text-4xl font-extrabold font-serifJapanese text-black mb-10 text-center tracking-tight">
+        AI Teacher
+      </h1>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
         <textarea
-          rows={4}
+          rows={5}
           placeholder="Ask your Japanese language question..."
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          className="w-full p-4 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full p-5 border border-black/40 rounded-md resize-none text-black placeholder-black/60
+                     focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 transition"
           disabled={loading}
+          aria-label="Input your Japanese language question"
         />
+
         <button
           type="submit"
-          disabled={loading}
-          className="mt-4 bg-secondary text-white font-bold px-6 py-3 rounded hover:bg-accent transition"
+          disabled={loading || !question.trim()}
+          className={`w-full py-3 rounded-md font-semibold tracking-wide text-white
+            transition-transform duration-150 ease-in-out focus-visible:outline-none 
+            focus-visible:ring-4 focus-visible:ring-black/70
+            ${
+              loading || !question.trim()
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-black hover:bg-gray-900 hover:scale-[1.03]"
+            }
+          `}
+          aria-busy={loading}
         >
-          {loading ? "Thinking..." : "Ask AI Teacher"}
+          {loading ? (
+            // Simple spinner icon using SVG
+            <svg
+              className="animate-spin h-6 w-6 mx-auto"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              />
+            </svg>
+          ) : (
+            "Ask AI Teacher"
+          )}
         </button>
       </form>
 
-      {error && <p className="mt-4 text-red-600">{error}</p>}
+      {error && (
+        <p className="text-center mt-6 text-red-600 font-semibold" role="alert">
+          {error}
+        </p>
+      )}
 
       {answer && (
-        <div className="mt-6 p-4 border rounded bg-gray-50 whitespace-pre-wrap">
-          <h2 className="text-2xl font-semibold mb-2">Answer:</h2>
+        <section
+          className="mt-10 p-6 border border-black/20 rounded-lg bg-gray-50 shadow-md whitespace-pre-wrap text-black font-sans"
+          aria-live="polite"
+        >
+          <h2 className="text-2xl font-bold mb-3">Answer:</h2>
           <p>{answer}</p>
-        </div>
+        </section>
       )}
     </div>
   );

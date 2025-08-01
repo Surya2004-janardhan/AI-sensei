@@ -13,9 +13,9 @@ export default function Dictionary() {
     setLoading(true);
     try {
       const res = await dictionaryAPI.searchWord(query);
-      setResults(res.data); // Assuming API returns array (adjust if needed)
+      setResults(res.data); // Assuming API returns an array
     } catch (err) {
-      setError(`Failed to fetch dictionary data${err.message}`);
+      setError(`Failed to fetch dictionary data: ${err.message}`);
       setResults([]);
     } finally {
       setLoading(false);
@@ -23,51 +23,66 @@ export default function Dictionary() {
   };
 
   return (
-    <div>
-      <h1 className="text-3xl font-serifJapanese mb-6 text-primary">Dictionary</h1>
-      <div className="flex max-w-md mb-8">
+    <div className="min-h-screen bg-white px-6 py-12 max-w-5xl mx-auto font-sans text-black">
+      <h1 className="text-4xl font-extrabold font-serifJapanese mb-10 text-center tracking-tight">
+        Dictionary
+      </h1>
+
+      <div className="flex max-w-md mx-auto mb-8 shadow-md rounded-md overflow-hidden border border-black/20">
         <input
           type="text"
-          className="flex-grow border rounded-l p-3 focus:outline-none focus:ring-2 focus:ring-primary"
+          className="flex-grow px-4 py-3 text-black placeholder-black/50 focus:outline-none focus:ring-2 focus:ring-black transition"
           placeholder="Search Japanese word or romaji"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          aria-label="Dictionary search input"
         />
         <button
           onClick={handleSearch}
-          className="px-4 py-3 bg-secondary hover:bg-accent text-white rounded-r transition"
+          className="bg-black text-white px-6 py-3 font-semibold hover:bg-gray-900 transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/70"
+          aria-label="Execute dictionary search"
         >
           Search
         </button>
       </div>
-      {loading && <p>Loading...</p>}
-      {error && <p className="text-red-600">{error}</p>}
-      <ul className="space-y-4">
-        {results && results.length > 0 ? (
-          results.map((entry) => (
+
+      {loading && (
+        <p className="text-center text-black/70 font-medium mb-6">Loading...</p>
+      )}
+      {error && (
+        <p className="text-center text-red-600 font-semibold mb-6">{error}</p>
+      )}
+
+      {results && results.length > 0 ? (
+        <ul className="space-y-6">
+          {results.map((entry) => (
             <li
               key={entry.slug}
-              className="p-4 border rounded shadow-sm bg-white hover:shadow-md transition"
+              className="p-6 border border-black/20 rounded-lg shadow-md bg-white hover:shadow-xl transition"
             >
-              <h2 className="font-serifJapanese text-xl mb-2">
+              <h2 className="font-serifJapanese text-2xl mb-3 text-black">
                 {entry.japanese?.map((j, idx) => (
-                  <span key={idx} className="mr-2">
+                  <span key={idx} className="mr-3">
                     {j.word || j.reading}
                   </span>
                 ))}
               </h2>
-              <ul className="list-disc pl-6 text-sm text-textPrimary">
+              <ul className="list-disc pl-6 text-base text-black/85 space-y-1">
                 {entry.senses?.map((sense, idx) => (
                   <li key={idx}>{sense.english_definitions?.join(", ")}</li>
                 ))}
               </ul>
             </li>
-          ))
-        ) : (
-          !loading && <p>No results</p>
-        )}
-      </ul>
+          ))}
+        </ul>
+      ) : (
+        !loading && (
+          <p className="text-center text-black/60 italic font-medium mt-8">
+            No results found.
+          </p>
+        )
+      )}
     </div>
   );
 }

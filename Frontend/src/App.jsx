@@ -15,12 +15,39 @@ import { useAuth } from "./contexts/AuthContext.jsx";
 function App() {
   const { user, loading } = useAuth();
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background-pink font-japanese text-text-primary">
+        <svg
+          className="animate-spin h-12 w-12 text-secondary"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          aria-label="Loading"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+          ></path>
+        </svg>
+        <span className="sr-only">Loading...</span>
+      </div>
+    );
+  }
 
   return (
     <Router>
       <Navbar />
-    <main className="min-h-screen w-full font-japanese text-text-primary">
+      <main className="min-h-screen w-full font-japanese text-text-primary ">
         <Routes>
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
           <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
@@ -32,7 +59,7 @@ function App() {
           <Route path="/ai-teacher" element={user ? <AITeacher /> : <Navigate to="/login" />} />
           <Route path="/doubt-solver" element={user ? <DoubtSolver /> : <Navigate to="/login" />} />
           <Route path="/history" element={user ? <History /> : <Navigate to="/login" />} />
-          {/* Add 404 or redirect as needed */}
+          {/* Add 404 or redirect route here if desired */}
         </Routes>
       </main>
     </Router>
@@ -40,7 +67,3 @@ function App() {
 }
 
 export default App;
-
-// export default function App() {
-//   return <div className="max-w-8xl mx-auto px-4  bg-amber-300 py-6 min-h-screen bg-background-pink font-japanese text-textPrimary transition-colors">Sample text </div>
-//  }

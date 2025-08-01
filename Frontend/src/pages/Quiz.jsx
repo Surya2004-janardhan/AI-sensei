@@ -36,42 +36,79 @@ export default function Quiz() {
     }
   };
 
-  if (loading) return <p>Loading quiz...</p>;
-  if (error) return <p className="text-red-600">{error}</p>;
-  if (!quiz) return <p>No quiz available for this level.</p>;
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white font-sans text-black">
+        <p className="text-lg font-semibold">Loading quiz...</p>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white font-sans text-red-600">
+        <p className="text-lg font-semibold">{error}</p>
+      </div>
+    );
+
+  if (!quiz)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white font-sans text-black">
+        <p className="text-lg font-semibold">No quiz available for this level.</p>
+      </div>
+    );
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <h1 className="text-3xl font-serifJapanese text-primary mb-6">{quiz.title}</h1>
+    <div className="min-h-screen bg-white px-6 py-12 font-sans text-black max-w-3xl mx-auto">
+      <h1 className="text-4xl font-extrabold font-serifJapanese text-black mb-10 tracking-tight">
+        {quiz.title}
+      </h1>
+
       {quiz.questions.map((q, i) => (
-        <div key={i} className="mb-4 p-4 border rounded bg-white">
-          <p className="font-semibold mb-2">{q.question}</p>
-          <div className="space-y-2">
+        <div
+          key={i}
+          className="mb-6 p-6 border border-black/20 rounded-lg bg-white shadow-md transition-all hover:shadow-lg"
+        >
+          <p className="font-semibold mb-4 text-lg">{q.question}</p>
+          <div className="space-y-3">
             {q.options.map((option, idx) => (
-              <label key={idx} className="block cursor-pointer">
+              <label
+                key={idx}
+                className="block cursor-pointer select-none rounded-md px-4 py-2 border border-black/30 hover:bg-black/5 transition"
+              >
                 <input
                   type="radio"
                   name={`question-${i}`}
                   value={option}
                   onChange={() => handleChange(i, option)}
                   checked={answers[i] === option}
-                  className="mr-2"
+                  className="mr-3 align-middle"
                 />
-                {option}
+                <span className="align-middle">{option}</span>
               </label>
             ))}
           </div>
         </div>
       ))}
+
       <button
         onClick={handleSubmit}
         disabled={submitting || Object.keys(answers).length !== quiz.questions.length}
-        className="bg-secondary text-white font-bold py-3 px-6 rounded hover:bg-accent transition"
+        className={`w-full py-3 rounded-md font-semibold tracking-wide transition-transform duration-150 ease-in-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/70
+          ${
+            submitting || Object.keys(answers).length !== quiz.questions.length
+              ? "bg-gray-400 cursor-not-allowed text-gray-700"
+              : "bg-black text-white hover:bg-gray-900 hover:scale-[1.03]"
+          }
+        `}
       >
         {submitting ? "Submitting..." : "Submit Quiz"}
       </button>
 
-      {score !== null && <p className="mt-4 text-xl font-semibold">Your Score: {score}</p>}
+      {score !== null && (
+        <p className="mt-8 text-2xl font-extrabold text-black text-center">
+          Your Score: {score}
+        </p>
+      )}
     </div>
   );
 }

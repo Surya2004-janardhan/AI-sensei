@@ -14,21 +14,38 @@ export default function History() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Loading your AI interactions...</p>;
-  if (error) return <p className="text-red-600">{error}</p>;
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white font-sans text-black">
+        <p className="text-lg font-semibold">Loading your AI interactions...</p>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white font-sans text-red-600">
+        <p className="text-lg font-semibold">{error}</p>
+      </div>
+    );
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <h1 className="text-3xl font-serifJapanese text-primary mb-6">Your Past AI Interactions</h1>
+    <div className="min-h-screen bg-white px-6 py-12 font-sans text-black max-w-4xl mx-auto">
+      <h1 className="text-4xl font-extrabold font-serifJapanese mb-10 text-center">
+        Your Past AI Interactions
+      </h1>
+
       {history.length === 0 ? (
-        <p>No interactions found.</p>
+        <p className="text-center text-black/70 font-semibold text-lg">No interactions found.</p>
       ) : (
-        <ul className="space-y-4">
+        <ul className="space-y-6">
           {history.map(({ _id, question, answer, date }) => (
-            <li key={_id} className="p-4 bg-white rounded-lg shadow-sm">
-              <p className="font-semibold mb-1">Q: {question}</p>
-              <p className="mb-2 text-gray-700 whitespace-pre-wrap">A: {answer}</p>
-              <small className="text-gray-500">{new Date(date).toLocaleString()}</small>
+            <li
+              key={_id}
+              className="p-6 bg-white border border-black/10 rounded-lg shadow-md transition-transform hover:scale-[1.02] hover:shadow-xl"
+            >
+              <p className="font-semibold text-lg mb-3">Q: {question}</p>
+              <p className="mb-4 text-black/90 whitespace-pre-wrap">{answer}</p>
+              <small className="text-black/50 block text-right">{new Date(date).toLocaleString()}</small>
             </li>
           ))}
         </ul>

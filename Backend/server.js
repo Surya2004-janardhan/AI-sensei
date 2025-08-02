@@ -12,9 +12,19 @@ const dictionaryRoutes = require("./routes/dictionary");
 const roadmapRoutes = require("./routes/roadmap");
 const quizRoutes = require("./routes/quiz");
 const historyRoutes = require("./routes/history");
-
+const http = require("http");
 const app = express();
+const server = http.createServer(app);
+const { Server } = require("socket.io");
 
+const io = new Server(server, {
+  cors: { origin: "*" }, // Lock down in production
+});
+
+app.set("io", io); // Allow controllers access to io instance
+
+const chatSocket = require("./sockets/chat");
+chatSocket(io);
 // Connect to MongoDB
 connectDB();
 
@@ -30,6 +40,8 @@ app.use("/api/dictionary", dictionaryRoutes);
 app.use("/api/roadmaps", roadmapRoutes);
 app.use("/api/quiz", quizRoutes);
 app.use("/api/history", historyRoutes);
+app.use("/api/users", require("./routes/messages"));
+app.use("/api/chat", require("./routes/chat"));
 
 // Basic root route to check server
 app.get("/", (req, res) => {

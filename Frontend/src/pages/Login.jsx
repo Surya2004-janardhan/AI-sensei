@@ -18,6 +18,7 @@ export default function Login() {
       await login({ email, password });
       navigate("/");
     } catch {
+      console.log("failed");
       setError("Invalid credentials");
     } finally {
       setLoading(false); // stop loader in both success and failure

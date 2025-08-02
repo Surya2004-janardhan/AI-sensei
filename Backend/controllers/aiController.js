@@ -10,7 +10,7 @@ import Groq from "groq-sdk";
 // }
 
 const groq = new Groq({
-  // apiKey: "process.env.GROQ_API_KEY",
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 const SYSTEM_PROMPT = `
@@ -72,5 +72,91 @@ export const aiTeacher = async (req, res) => {
   } catch (error) {
     console.error("Error in aiTeacher:", error);
     res.status(500).json({ error: "Failed to process AI answer." });
+  }
+};
+
+function cosineSimilarity(a, b) {
+  const dot = a.reduce((acc, val, i) => acc + val * b[i], 0);
+  const magA = Math.sqrt(a.reduce((acc, val) => acc + val * val, 0));
+  const magB = Math.sqrt(b.reduce((acc, val) => acc + val * val, 0));
+  return dot / (magA * magB);
+}
+
+async function embedQuery(query) {
+  const res = await fetch("https://api.groq.com/openai/v1/embeddings", {
+    method: "POST",
+    headers: {
+      Authorization:
+        "Bearer <keep api later>",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "nomic-embed-text-v1",
+      input: query,
+    }),
+  });
+  const json = await res.json();
+  return json?.data?.[0]?.embedding;
+}
+
+function getVectorDB() {
+  const dbPath = path.join(process.cwd(), "grammar_DB.json");
+  return JSON.parse(fs.readFileSync(dbPath, "utf-8"));
+}
+
+export const grammarTeacher = async (req, res) => {
+  try {
+    const { question } = req.body;
+
+    if (!question || !question.trim()) {
+      return res.status(400).json({ error: "Question is required." });
+    }
+
+    const userQuery = question.trim();
+    const userEmbedding = await embedQuery(userQuery);
+    if (!userEmbedding) {
+      return res.status(500).json({ error: "Embedding generation failed." });
+    }
+
+    const db = getVectorDB();
+    const results = db
+      .map((entry) => ({
+        text: entry.text,
+        score: cosineSimilarity(userEmbedding, entry.embedding),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+
+    const context = results
+      .map((r, i) => `#${i + 1}:\n${r.text}`)
+      .join("\n---\n");
+
+    const messages = [
+      {
+        role: "system",
+        content: SYSTEM_PROMPT,
+      },
+      {
+        role: "user",
+        content: `Use the following context to answer the question.\n\nContext:\n${context}\n\nQuestion: ${userQuery}`,
+      },
+    ];
+
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages,
+    });
+
+    const answer =
+      completion.choices?.[0]?.message?.content?.trim() ||
+      "Sorry, no answer was generated.";
+
+    res.json({
+      answer,
+      contextUsed: context,
+    });
+  } catch (error) {
+    console.error("❌ Error in grammarTeacher:", error);
+    res.status(500).json({ error: "Failed to process the question." });
   }
 };

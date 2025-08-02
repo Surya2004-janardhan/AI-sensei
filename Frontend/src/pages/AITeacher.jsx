@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import aiAPI from "../api/ai.js";
 
 export default function AITeacher() {
@@ -6,7 +6,24 @@ export default function AITeacher() {
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [history, setHistory] = useState([]); // To store previous Q&A pairs
+  // Initialize from localStorage
+  const [history, setHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem("aiTeacherHistory");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Save to localStorage on history change
+  useEffect(() => {
+    try {
+      localStorage.setItem("aiTeacherHistory", JSON.stringify(history));
+    } catch {
+      // ignore errors
+    }
+  }, [history]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,13 +39,11 @@ export default function AITeacher() {
 
       setAnswer(newAnswer);
 
-      // Add current Q&A to history, keep newest first
       setHistory((prev) => [
         { question: question.trim(), answer: newAnswer },
         ...prev,
       ]);
 
-      // Clear input for convenience
       setQuestion("");
     } catch {
       setError("Failed to get answer from AI Teacher.");
@@ -43,26 +58,33 @@ export default function AITeacher() {
         AI Teacher
       </h1>
 
-      {/* Input area */}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-2">
         <textarea
-          rows={5}
+          rows={3}
           placeholder="Ask your Japanese language question..."
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           className="w-full p-5 border border-black/40 rounded-md resize-none text-black placeholder-black/60
-                      focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 transition"
+                     focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 transition"
           disabled={loading}
           aria-label="Input your Japanese language question"
         />
+        {/* Coming soon message */}
+        <p className="text-xs text-gray-500 italic font-serifJapanese mb-4">
+          GrammarAI, KanjiAI, VocabularyAI coming soon
+        </p>
 
         <button
           type="submit"
           disabled={loading || !question.trim()}
           className={`w-full py-3 rounded-md font-semibold tracking-wide text-white
-           transition-transform duration-150 ease-in-out focus-visible:outline-none 
-           focus-visible:ring-4 focus-visible:ring-black/70
-           ${loading || !question.trim() ? "bg-gray-400 cursor-not-allowed" : "bg-black hover:bg-gray-900 hover:scale-[1.03]"}`}
+                     transition-transform duration-150 ease-in-out focus-visible:outline-none 
+                     focus-visible:ring-4 focus-visible:ring-black/70
+                     ${
+                       loading || !question.trim()
+                         ? "bg-gray-400 cursor-not-allowed"
+                         : "bg-black hover:bg-gray-900 hover:scale-[1.03]"
+                     }`}
           aria-busy={loading}
         >
           {loading ? (
@@ -93,14 +115,12 @@ export default function AITeacher() {
         </button>
       </form>
 
-      {/* Error message */}
       {error && (
         <p className="text-center mt-6 text-red-600 font-semibold" role="alert">
           {error}
         </p>
       )}
 
-      {/* Current answer section */}
       {answer && (
         <section
           className="mt-10 p-6 border border-black/20 rounded-lg bg-gray-50 shadow-md whitespace-pre-wrap text-black font-sans"
@@ -111,7 +131,6 @@ export default function AITeacher() {
         </section>
       )}
 
-      {/* Previous questions and answers horizontally scrollable */}
       {history.length > 0 && (
         <section className="mt-16">
           <h3 className="text-xl font-semibold mb-4 font-serifJapanese text-black">
@@ -130,7 +149,8 @@ export default function AITeacher() {
                   <span className="font-serifJapanese">Q:</span> {q}
                 </p>
                 <div className="text-black/80 whitespace-pre-wrap text-sm max-h-32 overflow-y-auto">
-                  <span className="font-serifJapanese font-semibold">A:</span> {a}
+                  <span className="font-serifJapanese font-semibold">A:</span>{" "}
+                  {a}
                 </div>
               </div>
             ))}

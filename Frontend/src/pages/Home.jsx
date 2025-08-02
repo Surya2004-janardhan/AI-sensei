@@ -53,11 +53,12 @@ export default function Home() {
         style={{ minHeight: "100vh" }}
       /> */}
 
-      <main className="flex-grow flex flex-col justify-center relative z-10">
+      <main className=" flex-grow flex flex-col justify-center relative z-10">
         {/* Row for word/sentence boxes and emoji/airplane center, with bigger spacing */}
-        <div className="flex flex-row items-start w-full justify-center mb-8 mt-8">
+        <div className=" flex flex-row items-start w-full justify-center mb-8 mt-1">
           {/* Left box */}
-          <aside className="aside-left w-64 bg-white border border-black/20 rounded-lg shadow-md p-5 font-serifJapanese flex flex-col items-center self-start mr-12">
+          <aside className="aside-left hidden md:flex w-64 bg-white border border-black/20 rounded-lg shadow-md p-5 font-serifJapanese flex-col items-center self-start">
+            {" "}
             <h2 className="text-lg font-semibold mb-3 border-b border-black/20 pb-1 w-full text-center">
               Word of the Day
             </h2>
@@ -114,7 +115,8 @@ export default function Home() {
           </div>
 
           {/* Right box */}
-          <aside className="aside-right w-64 bg-white border border-black/20 rounded-lg shadow-md p-5 font-serifJapanese flex flex-col items-center self-start ml-12">
+          <aside className="aside-right hidden md:flex w-64 bg-white border border-black/20 rounded-lg shadow-md p-5 font-serifJapanese flex-col items-center self-start">
+            {" "}
             <h2 className="text-lg font-semibold mb-3 border-b border-black/20 pb-1 w-full text-center">
               Sentence of the Day
             </h2>
@@ -163,7 +165,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className="text-sm text-black/60 font-serifJapanese text-center py-10 my-1 select-none">
+        <div className="text-sm text-black/60 font-serifJapanese text-center py-10 my-1 mb-6 select-none">
           🌸 頑張ってください! (Good luck with your studies!)
         </div>
       </main>

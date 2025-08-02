@@ -1,74 +1,74 @@
-import React, { useEffect, useState, useRef } from "react";
-import * as messagesAPI from "../api/messages"; // Your backend messages API (only 3 methods)
+// import React, { useEffect, useState, useRef } from "react";
+// import * as messagesAPI from "../api/messages"; // Your backend messages API (only 3 methods)
 
 export default function Chat() {
-  const [latestChats, setLatestChats] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [chatInput, setChatInput] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [chatLoading, setChatLoading] = useState(false);
-  const [error, setError] = useState("");
-  const scrollRef = useRef();
+  // const [latestChats, setLatestChats] = useState([]);
+  // const [selectedUser, setSelectedUser] = useState(null);
+  // const [chatMessages, setChatMessages] = useState([]);
+  // const [chatInput, setChatInput] = useState("");
+  // const [loading, setLoading] = useState(true);
+  // const [chatLoading, setChatLoading] = useState(false);
+  // const [error, setError] = useState("");
+  // const scrollRef = useRef();
 
-  useEffect(() => {
-    setLoading(true);
-    messagesAPI
-      .getLatestMessages()
-      .then((res) => {
-        setLatestChats(res.data || []);
-        setError("");
-      })
-      .catch(() => setError("Failed to load latest chats"))
-      .finally(() => setLoading(false));
-  }, []);
+  // useEffect(() => {
+  //   setLoading(true);
+  //   messagesAPI
+  //     .getLatestMessages()
+  //     .then((res) => {
+  //       setLatestChats(res.data || []);
+  //       setError("");
+  //     })
+  //     .catch(() => setError("Failed to load latest chats"))
+  //     .finally(() => setLoading(false));
+  // }, []);
 
-  // Open chat with user from latest chats
-  const openChatWith = async (msg) => {
-    // Determine other user in the conversation
-    const other =
-      msg.from._id === msg.to._id
-        ? msg.to
-        : msg.from._id !== undefined && msg.from._id !== msg.to._id
-        ? msg.from
-        : msg.to;
+  // // Open chat with user from latest chats
+  // const openChatWith = async (msg) => {
+  //   // Determine other user in the conversation
+  //   const other =
+  //     msg.from._id === msg.to._id
+  //       ? msg.to
+  //       : msg.from._id !== undefined && msg.from._id !== msg.to._id
+  //       ? msg.from
+  //       : msg.to;
 
-    setSelectedUser(other);
-    setChatLoading(true);
-    try {
-      const res = await messagesAPI.getChatWithUser(other._id);
-      setChatMessages(res.data || []);
-      setError("");
-    } catch {
-      setError("Failed to load chat messages");
-      setChatMessages([]);
-    } finally {
-      setChatLoading(false);
-      setTimeout(() => {
-        if (scrollRef.current)
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }, 100);
-    }
-  };
+  //   setSelectedUser(other);
+  //   setChatLoading(true);
+  //   try {
+  //     const res = await messagesAPI.getChatWithUser(other._id);
+  //     setChatMessages(res.data || []);
+  //     setError("");
+  //   } catch {
+  //     setError("Failed to load chat messages");
+  //     setChatMessages([]);
+  //   } finally {
+  //     setChatLoading(false);
+  //     setTimeout(() => {
+  //       if (scrollRef.current)
+  //         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  //     }, 100);
+  //   }
+  // };
 
-  // Send chat message
-  const handleSendMsg = async (e) => {
-    e.preventDefault();
-    if (!chatInput.trim() || !selectedUser) return;
+  // // Send chat message
+  // const handleSendMsg = async (e) => {
+  //   e.preventDefault();
+  //   if (!chatInput.trim() || !selectedUser) return;
 
-    try {
-      const res = await messagesAPI.sendMessage(selectedUser._id, chatInput);
-      setChatMessages((msgs) => [...msgs, res.data]);
-      setChatInput("");
-      setTimeout(() => {
-        if (scrollRef.current)
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }, 100);
-      setError("");
-    } catch {
-      setError("Failed to send message");
-    }
-  };
+  //   try {
+  //     const res = await messagesAPI.sendMessage(selectedUser._id, chatInput);
+  //     setChatMessages((msgs) => [...msgs, res.data]);
+  //     setChatInput("");
+  //     setTimeout(() => {
+  //       if (scrollRef.current)
+  //         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  //     }, 100);
+  //     setError("");
+  //   } catch {
+  //     setError("Failed to send message");
+  //   }
+  // };
 
   return (
     <div className="min-h-screen bg-white px-4 md:px-8 py-6 font-sans text-black max-w-5xl mx-auto flex flex-col">

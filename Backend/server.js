@@ -5,6 +5,7 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 
 // Route files
+const wordOfTheDayRoutes = require("./routes/wordOfTheDay");
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/user");
 const aiRoutes = require("./routes/ai");
@@ -42,6 +43,7 @@ app.use("/api/quiz", quizRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/users", require("./routes/messages"));
 app.use("/api/chat", require("./routes/chat"));
+app.use("/api/wordoftheday", wordOfTheDayRoutes);
 
 // Basic root route to check server
 app.get("/", (req, res) => {

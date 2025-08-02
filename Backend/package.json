@@ -4,8 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-      "start": "node server.js",
-
+    "start": "node server.js",
     "test": "jest"
   },
   "keywords": [],
@@ -22,6 +21,7 @@
     "jsonwebtoken": "^9.0.2",
     "langchain": "^0.3.30",
     "mongoose": "^8.17.0",
+    "socket.io": "^4.8.1",
     "wanakana": "^5.3.1"
   },
   "devDependencies": {

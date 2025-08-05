@@ -43,8 +43,8 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="  min-h-[100dvh] flex flex-col bg-white font-sans text-black overflow-x-hidden relative">
-      <main className=" m-0 flex-grow flex flex-col justify-center relative z-10 px-4 sm: md:px-0 bg-white min-h-[100dvh]">
+    <div className=" overflow-hidden sm:p-8 sm:pt-9.5 p-2 min-h-[100dvh] flex flex-col bg-white font-sans text-black overflow-x-hidden relative">
+      <main className=" m-0 flex-grow flex flex-col justify-start relative z-10 px-4 sm: md:px-0 bg-white min-h-[100dvh]">
         {/* <h2 className="text-2xl border bg-amber-400 sm:bg-white ">
           tata testha dentho
         </h2> */}
@@ -111,12 +111,13 @@ export default function Home() {
               <span className="text-primary font-serifJapanese">AI Sensei</span>{" "}
               <span className="hidden md:inline">🌸</span>
             </h1>
-            <p className="text-base md:text-lg text-black/80 mb-8 leading-relaxed font-japanese">
+            <p className="hidden md:block text-base md:text-lg text-black/80 mb-8 leading-relaxed font-japanese">
               Your personalized AI-powered Japanese language teacher.
               <br />
               Explore lessons, AI teacher, and real-time dictionary support to
               master Japanese levels and beyond.
             </p>
+
             <div className="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-6">
               <Link
                 to="/ai-teacher"

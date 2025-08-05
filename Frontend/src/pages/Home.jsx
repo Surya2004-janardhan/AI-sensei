@@ -43,8 +43,8 @@ export default function Home() {
   }, []);
 
   return (
-    <div className=" overflow-hidden sm:p-8 sm:pt-9.5 p-2 min-h-[100dvh] flex flex-col bg-white font-sans text-black overflow-x-hidden relative">
-      <main className=" m-0 flex-grow flex flex-col justify-start relative z-10 px-4 sm: md:px-0 bg-white min-h-[100dvh]">
+    <div className="  overflow-hidden sm:p-8 sm:pt-9.5 p-2 min-h-[100dvh] flex flex-col bg-white font-sans text-black overflow-x-hidden relative">
+      <main className="  m-0 flex-grow flex flex-col justify-start relative z-10 px-4 sm: md:px-0 bg-white min-h-[100dvh] ">
         {/* <h2 className="text-2xl border bg-amber-400 sm:bg-white ">
           tata testha dentho
         </h2> */}
@@ -134,13 +134,13 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className="text-sm text-black/60 font-serifJapanese text-center py-6 select-none">
+        <div className="  text-sm text-black/60 font-serifJapanese text-center py-6 select-none">
           🌸 頑張ってください! (Good luck with your studies!)
         </div>
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-black text-white py-1.5 z-50 select-none w-full">
-        <div className="max-w-md mx-auto px-4 pb-1.5 text-center font-serifJapanese text-base sm:text-sm leading-snug">
+      <footer className=" fixed bottom-0 left-0 right-0 bg-black text-white py-1.5 z-50 select-none w-full">
+        <div className="  max-w-md mx-auto px-4 pb-1.5 text-center font-serifJapanese text-base sm:text-sm leading-snug">
           <span className="block mb-0.5 text-lg sm:text-base font-semibold">
             「千里の道も一歩から」
           </span>

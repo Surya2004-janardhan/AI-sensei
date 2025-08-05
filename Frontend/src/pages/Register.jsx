@@ -6,12 +6,29 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await register({ email, password, name });
-    navigate("/login");
+    setError("");
+    setLoading(true); // start loaderrs
+    
+    try {
+      const res = await register({ email, password, name });
+      console.log(res.data.user);
+      if (res.data.user) {
+        navigate("/");
+        return;
+      }
+    } catch {
+      console.log("failed");
+      setError("User with same email exists");
+    } finally {
+      setLoading(false); // stop loader in both success and failure
+    }
   };
 
   return (
@@ -20,6 +37,11 @@ export default function Register() {
         <h1 className="text-4xl font-extrabold text-black mb-10 text-center font-sans tracking-tight">
           Register
         </h1>
+        {error && (
+          <p className="text-red-600 mb-4 text-center text-sm sm:text-base">
+            {error}
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="space-y-7">
           <input
             type="text"
@@ -27,6 +49,7 @@ export default function Register() {
             placeholder="Name"
             onChange={(e) => setName(e.target.value)}
             required
+            disabled={loading} // Disable input while loading
             className="w-full px-5 py-3 border border-black/40 rounded-md text-black placeholder-black/60
               focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 transition"
           />
@@ -36,6 +59,7 @@ export default function Register() {
             placeholder="Email"
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={loading} // Disable input while loading
             className="w-full px-5 py-3 border border-black/40 rounded-md text-black placeholder-black/60
               focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 transition"
           />
@@ -45,16 +69,48 @@ export default function Register() {
             placeholder="Password"
             onChange={(e) => setPassword(e.target.value)}
             required
+            disabled={loading} // Disable input while loading
             className="w-full px-5 py-3 border border-black/40 rounded-md text-black placeholder-black/60
               focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 transition"
           />
           <button
             type="submit"
-            className="w-full bg-black text-white py-3 rounded-md font-semibold tracking-wide 
-              hover:bg-gray-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/70 
-              transition-transform duration-150 ease-in-out hover:scale-[1.03]"
+            disabled={loading}
+            className={`w-full py-3 rounded-md font-semibold tracking-wide text-white
+              transition-transform duration-150 ease-in-out focus-visible:outline-none 
+              focus-visible:ring-4 focus-visible:ring-black/70
+              ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-black hover:bg-gray-900 hover:scale-[1.03]"
+              }`}
+            aria-busy={loading}
           >
-            Register
+            {loading ? (
+              <svg
+                className="animate-spin h-6 w-6 mx-auto"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                />
+              </svg>
+            ) : (
+              "Register"
+            )}
           </button>
         </form>
       </div>

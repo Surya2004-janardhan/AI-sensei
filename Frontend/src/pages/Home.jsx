@@ -43,7 +43,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="  overflow-hidden sm:p-8 sm:pt-9.5 p-2 min-h-[100dvh] flex flex-col bg-white font-sans text-black overflow-x-hidden relative">
+    <div className="h-screen overflow-hidden mt-6 md:mt-9  sm:p-8 sm:pt-9.5 p-2 flex flex-col bg-white font-sans text-black overflow-x-hidden relative">
       <main className="  m-0 flex-grow flex flex-col justify-start relative z-10 px-4 sm: md:px-0 bg-white min-h-[100dvh] ">
         {/* <h2 className="text-2xl border bg-amber-400 sm:bg-white ">
           tata testha dentho
@@ -104,12 +104,12 @@ export default function Home() {
             )}
           </aside>
         </div>
-        <div className=" flex justify-center px-2 md:px-0">
+        <div className=" flex justify-center px-2 md:px-0 md:mt-6">
           <div className=" max-w-full md:max-w-3xl bg-white border border-black/20 rounded-lg shadow-lg p-6 md:p-8 text-center bg-opacity-90 z-10">
             <h1 className="text-3xl md:text-5xl font-extrabold mb-4 tracking-tight">
               Welcome to{" "}
               <span className="text-primary font-serifJapanese">AI Sensei</span>{" "}
-              <span className="hidden md:inline">🌸</span>
+              <span>-🌸-</span>
             </h1>
             <p className="hidden md:block text-base md:text-lg text-black/80 mb-8 leading-relaxed font-japanese">
               Your personalized AI-powered Japanese language teacher.
@@ -137,6 +137,8 @@ export default function Home() {
         <div className="  text-sm text-black/60 font-serifJapanese text-center py-6 select-none">
           🌸 頑張ってください! (Good luck with your studies!)
         </div>
+
+        {/* <h3>placeholder for some random shit now </h3> */}
       </main>
 
       <footer className=" fixed bottom-0 left-0 right-0 bg-black text-white py-1.5 z-50 select-none w-full">

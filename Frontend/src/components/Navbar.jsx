@@ -133,7 +133,7 @@ export default function Navbar() {
               </button>
               {/* Profile Icon + Popup (visible in both desktop and mobile menu) */}
               <div
-                className="relative ml-0 sm:ml-3 flex items-center"
+                className="hidden sm:flex relative ml-0 sm:ml-3 items-center"
                 onMouseEnter={handleProfileEnter}
                 onMouseLeave={handleProfileLeave}
                 onFocus={handleProfileEnter}
@@ -142,11 +142,11 @@ export default function Navbar() {
                 style={{ minWidth: "40px" }}
               >
                 <div
-                  className="w-10 h-10 rounded-full bg-black/10 cursor-pointer flex items-center justify-center"
+                  className="  md:visible sm:visible w-10 h-10 rounded-full bg-black/10 cursor-pointer flex items-center justify-center"
                   aria-label="User Profile"
                   tabIndex={-1}
                 >
-                  <UserIcon className="h-5 w-5 sm:h-6 sm:w-6 text-black/70" />
+                  <UserIcon className=" h-5 w-5 sm:h-6 sm:w-6 text-black/70" />
                 </div>
                 {/* Popup Profile */}
                 {profileOpen && (

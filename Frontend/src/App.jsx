@@ -52,7 +52,7 @@ function App() {
   return (
     <Router>
       <Navbar />
-      <main className="min-h-screen w-full font-japanese text-text-primary ">
+      <main className="min-h-screen w-full font-japanese text-text-primary bg-white">
         <Routes>
           <Route
             path="/login"

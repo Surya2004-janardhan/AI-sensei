@@ -13,62 +13,61 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setLoading(true); // start loader
+    setLoading(true);
     try {
       await login({ email, password });
       navigate("/");
     } catch {
-      console.log("failed");
       setError("Invalid credentials");
     } finally {
-      setLoading(false); // stop loader in both success and failure
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md bg-white border border-black/20 shadow-lg rounded-lg p-6 sm:p-10">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-black mb-6 text-center font-sans tracking-tight">
+    <div className="min-h-screen flex items-center justify-center bg-white px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md border border-black/20 bg-white p-6 sm:p-10 rounded-lg shadow-lg">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-black mb-6 text-center">
           Login
         </h1>
+
         {error && (
           <p className="text-red-600 mb-4 text-center text-sm sm:text-base">
             {error}
           </p>
         )}
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <input
             type="email"
             placeholder="Email"
-            className="w-full px-4 py-3 border border-black/40 rounded-md text-black placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 transition text-sm sm:text-base"
+            className="w-full px-4 py-3 border border-black/40 rounded-md text-black placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 text-sm sm:text-base"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            disabled={loading} // Disable input while loading
+            disabled={loading}
             autoComplete="email"
           />
+
           <input
             type="password"
             placeholder="Password"
-            className="w-full px-4 py-3 border border-black/40 rounded-md text-black placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 transition text-sm sm:text-base"
+            className="w-full px-4 py-3 border border-black/40 rounded-md text-black placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 text-sm sm:text-base"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            disabled={loading} // Disable input while loading
+            disabled={loading}
             autoComplete="current-password"
           />
+
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-3 rounded-md font-semibold tracking-wide text-white
-              transition-transform duration-150 ease-in-out focus-visible:outline-none 
-              focus-visible:ring-4 focus-visible:ring-black/70
-              ${
-                loading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-black hover:bg-gray-900 hover:scale-[1.03]"
-              }`}
-            aria-busy={loading}
+            className={`w-full py-3 rounded-md font-semibold tracking-wide text-white transition duration-150 ease-in-out focus:outline-none focus:ring-4 focus:ring-black/70 ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-black hover:bg-gray-900 hover:scale-[1.03]"
+            }`}
           >
             {loading ? (
               <svg
@@ -76,7 +75,6 @@ export default function Login() {
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
-                aria-hidden="true"
               >
                 <circle
                   className="opacity-25"

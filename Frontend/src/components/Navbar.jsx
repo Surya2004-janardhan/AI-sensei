@@ -17,8 +17,8 @@ export default function Navbar() {
   const handleProfileLeave = () => setProfileOpen(false);
 
   return (
-    <header className="bg-white border-b border-black/10 sticky top-0 z-50 shadow">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex justify-between items-center font-sans select-none relative">
+    <header className=" bg-white border-b border-black/10 sticky top-0 z-50 shadow">
+      <nav className="  max-w-7xl  mx-auto px-4 sm:px-6 py-3 flex justify-between items-center font-sans select-none relative">
         {/* Brand Title */}
         <Link
           to="/"

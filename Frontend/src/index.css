@@ -1,6 +1,16 @@
 @import "tailwindcss";
 /* @import "tailwindcss/components"; */
 @import "tailwindcss/utilities";
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+}
+
 @theme {
   --color-background-pink: #fde7f3;
   /* baby sakura pink */

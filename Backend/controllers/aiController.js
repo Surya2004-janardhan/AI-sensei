@@ -9,6 +9,8 @@ import Groq from "groq-sdk";
 //   console.log("key is there")
 // }
 
+import fs from "fs";
+import { pipeline } from "@xenova/transformers";
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
@@ -75,35 +77,6 @@ export const aiTeacher = async (req, res) => {
   }
 };
 
-function cosineSimilarity(a, b) {
-  const dot = a.reduce((acc, val, i) => acc + val * b[i], 0);
-  const magA = Math.sqrt(a.reduce((acc, val) => acc + val * val, 0));
-  const magB = Math.sqrt(b.reduce((acc, val) => acc + val * val, 0));
-  return dot / (magA * magB);
-}
-
-async function embedQuery(query) {
-  const res = await fetch("https://api.groq.com/openai/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization:
-        "Bearer <keep api later>",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "nomic-embed-text-v1",
-      input: query,
-    }),
-  });
-  const json = await res.json();
-  return json?.data?.[0]?.embedding;
-}
-
-function getVectorDB() {
-  const dbPath = path.join(process.cwd(), "grammar_DB.json");
-  return JSON.parse(fs.readFileSync(dbPath, "utf-8"));
-}
-
 export const grammarTeacher = async (req, res) => {
   try {
     const { question } = req.body;
@@ -158,5 +131,90 @@ export const grammarTeacher = async (req, res) => {
   } catch (error) {
     console.error("❌ Error in grammarTeacher:", error);
     res.status(500).json({ error: "Failed to process the question." });
+  }
+};
+
+const kanjiData = JSON.parse(
+  fs.readFileSync("./vectorDBdata/kanji_vectors.json", "utf-8")
+);
+
+function cosineSimilarity(vecA, vecB) {
+  const dot = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
+  const magA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+  const magB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
+  return dot / (magA * magB);
+}
+
+async function getTopKRelevantChunks(query, topK = 5) {
+  const extractor = await pipeline(
+    "feature-extraction",
+    "Xenova/all-MiniLM-L6-v2"
+  );
+  const queryVector = Array.from(
+    (await extractor(query, { pooling: "mean", normalize: true })).data
+  );
+
+  const scored = kanjiData.map((entry) => ({
+    id: entry.id,
+    kanji: entry.kanji,
+    text: entry.text,
+    score: cosineSimilarity(queryVector, entry.vector),
+  }));
+
+  return scored.sort((a, b) => b.score - a.score).slice(0, topK);
+}
+
+const SYSTEM_PROMPT_KANJI = `
+You are a bilingual Kanji tutor who helps learners understand any Kanji deeply using Japanese and English.
+
+👩‍🏫 Your Job:
+- Use the given Kanji entries and user query to explain and answer clearly.
+- All Japanese must be in Hiragana and Katakana (use Kanji only when needed).
+- Translate every Japanese sentence into English.
+- Add emojis for key concepts (e.g. 🌸, 🔤, 📖).
+- No romaji.
+
+⛩️ Your responses must:
+- Give short explanations if the question is basic (like "what does 暗 mean?").
+- Be 200+ words for deeper queries (e.g. how 暗 differs from 闇).
+- Pull meaning, readings, and context from the given Kanji chunks.
+`;
+
+export const kanjiTeacher = async (req, res) => {
+  try {
+    const { question } = req.body;
+    if (!question || !question.trim()) {
+      return res.status(400).json({ error: "Question is required." });
+    }
+
+    const topChunks = await getTopKRelevantChunks(question);
+    const context = topChunks
+      .map((chunk, i) => `#${i + 1}: ${chunk.text}`)
+      .join("\n");
+
+    const messages = [
+      {
+        role: "system",
+        content: SYSTEM_PROMPT_KANJI,
+      },
+      {
+        role: "user",
+        content: `User Query: ${question}\n\nRelevant Kanji Info:\n${context}`,
+      },
+    ];
+
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages,
+    });
+
+    const answer =
+      completion.choices?.[0]?.message?.content?.trim() ||
+      "Sorry, no answer was generated.";
+
+    res.json({ answer });
+  } catch (error) {
+    console.error("Error in kanjiTeacher:", error);
+    res.status(500).json({ error: "Failed to process Kanji teacher answer." });
   }
 };

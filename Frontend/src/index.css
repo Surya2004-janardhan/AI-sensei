@@ -10,6 +10,32 @@ body,
   height: 100%;
   overflow-x: hidden;
 }
+/* Chrome, Safari, Edge */
+::-webkit-scrollbar {
+  width: 6px; /* narrower scrollbar width */
+  height: 6px; /* horizontal scrollbar height, if applicable */
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f0f0; /* light track color */
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #888; /* a medium grey thumb */
+  border-radius: 3px;
+  border: 1.5px solid #f0f0f0; /* padding around thumb */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #555; /* darker when hovered */
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin; /* makes scrollbar thinner */
+  scrollbar-color: #888 #f0f0f0; /* thumb and track color */
+}
 
 @theme {
   --color-background-pink: #fde7f3;

@@ -12,7 +12,7 @@ import Groq from "groq-sdk";
 import fs from "fs";
 import { pipeline } from "@xenova/transformers";
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: "",
 });
 
 const SYSTEM_PROMPT = `

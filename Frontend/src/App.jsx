@@ -4,6 +4,9 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Home from "./pages/Home.jsx";
@@ -96,6 +99,11 @@ function App() {
           />
           {/* Add 404 or redirect route here if desired */}
         </Routes>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          theme="colored" /* or "light" / "dark" depending on your app theme */
+        />
       </main>
     </Router>
   );

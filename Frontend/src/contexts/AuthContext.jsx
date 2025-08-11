@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import * as authAPI from "../api/auth";
 const AuthContext = createContext();
+import { ToastContainer, toast } from "react-toastify";
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -18,6 +19,15 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem("token");
+    toast.success("Logout successful!", {
+      position: "top-right",
+      autoClose: 2000,
+      style: {
+        backgroundColor: "#000", // black background
+        border: "1px solid lightgrey", // light grey border
+        color: "#fff", // white text
+      },
+    });
     setUser(null);
   };
 

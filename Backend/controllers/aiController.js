@@ -135,7 +135,7 @@ export const grammarTeacher = async (req, res) => {
 };
 
 const kanjiData = JSON.parse(
-  fs.readFileSync("./vectorDBdata/kanji_vectors.json", "utf-8")
+  fs.readFileSync("./ragdata/kanji_vectors.json", "utf-8")
 );
 
 function cosineSimilarity(vecA, vecB) {

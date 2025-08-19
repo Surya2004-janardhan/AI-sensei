@@ -8,9 +8,61 @@ import Groq from "groq-sdk";
 // }else{
 //   console.log("key is there")
 // }
-
+import { ChatMessage } from "../models/Chat.js";
 import fs from "fs";
+import path from "path";
 import { pipeline } from "@xenova/transformers";
+
+// Load grammar database
+function getVectorDB() {
+  try {
+    const grammarPath = path.join(
+      process.cwd(),
+      "controllers",
+      "grammar_DB.json"
+    );
+    return JSON.parse(fs.readFileSync(grammarPath, "utf-8"));
+  } catch (error) {
+    console.error("Error loading grammar DB:", error);
+    return [];
+  }
+}
+
+// Load kanji data
+function getKanjiData() {
+  try {
+    const kanjiPath = path.join(process.cwd(), "ragdata", "kanji_vectors.json");
+    return JSON.parse(fs.readFileSync(kanjiPath, "utf-8"));
+  } catch (error) {
+    console.error("Error loading kanji data:", error);
+    return [];
+  }
+}
+
+async function getTopKRelevantChunks(query, topK = 5) {
+  try {
+    const extractor = await pipeline(
+      "feature-extraction",
+      "Xenova/all-MiniLM-L6-v2"
+    );
+    const queryVector = Array.from(
+      (await extractor(query, { pooling: "mean", normalize: true })).data
+    );
+
+    const kanjiData = getKanjiData();
+    const scored = kanjiData.map((entry) => ({
+      id: entry.id,
+      kanji: entry.kanji,
+      text: entry.text,
+      score: cosineSimilarity(queryVector, entry.vector || entry.embedding),
+    }));
+
+    return scored.sort((a, b) => b.score - a.score).slice(0, topK);
+  } catch (error) {
+    console.error("Error in getTopKRelevantChunks:", error);
+    return [];
+  }
+}
 const groq = new Groq({
   apiKey: "",
 });
@@ -41,38 +93,129 @@ You are a bilingual AI teacher fluent in English and Japanese, designed to assis
 Your goal is to provide clear, bilingual answers in a teaching-friendly format.
 `;
 
+function cosineSimilarity(vecA, vecB) {
+  const dot = vecA.reduce((sum, a, i) => sum + a * (vecB[i] || 0), 0);
+  const magA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+  const magB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
+  return dot / (magA * magB + 1e-8);
+}
+
+// ---------------------- Embedding Function ----------------------
+async function embedQuery(query) {
+  const extractor = await pipeline(
+    "feature-extraction",
+    "Xenova/all-MiniLM-L6-v2"
+  );
+  const vector = Array.from(
+    (await extractor(query, { pooling: "mean", normalize: true })).data
+  );
+  return vector;
+}
+
+// export const aiTeacher = async (req, res) => {
+//   try {
+//     const { question } = req.body;
+//     if (!question || !question.trim()) {
+//       return res.status(400).json({ error: "Question is required." });
+//     }
+
+//     const messages = [
+//       {
+//         role: "system",
+//         content: SYSTEM_PROMPT,
+//       },
+//       {
+//         role: "user",
+//         content: question.trim(),
+//       },
+//     ];
+
+//     const completion = await groq.chat.completions.create({
+//       model: "llama-3.3-70b-versatile",
+//       messages,
+//       // max_tokens: 512,
+//       // temperature: 0.3,
+//     });
+
+//     const answer =
+//       completion.choices?.[0]?.message?.content?.trim() ||
+//       "Sorry, no answer was generated.";
+
+//     res.json({ answer });
+//   } catch (error) {
+//     console.error("Error in aiTeacher:", error);
+//     res.status(500).json({ error: "Failed to process AI answer." });
+//   }
+// };
+
 export const aiTeacher = async (req, res) => {
   try {
-    const { question } = req.body;
-    if (!question || !question.trim()) {
-      return res.status(400).json({ error: "Question is required." });
+    // console.log("inside of aiTeacher");
+    const { question, userId } = req.body;
+    if (!question?.trim() || !userId) {
+      return res
+        .status(400)
+        .json({ error: "Question and userId are required." });
     }
+    // console.log("check0");
 
+    // 1️⃣ Compute embedding for current question
+    const questionEmbedding = await embedQuery(question);
+    // console.log("check1");
+
+    // 2️⃣ Retrieve user's previous messages
+    const allMessages = (await ChatMessage.find({ userId })) || [];
+    const scored = allMessages.map((msg) => ({
+      msg,
+      score: cosineSimilarity(msg.embedding, questionEmbedding),
+    }));
+    const topRelevant = scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5) // top 5 relevant
+      .map((s) => s.msg);
+
+    const contextText = topRelevant
+      .map((m) => `${m.role}: ${m.content}`)
+      .join("\n");
+
+    // 3️⃣ Prepare messages for Groq
     const messages = [
-      {
-        role: "system",
-        content: SYSTEM_PROMPT,
-      },
+      { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
-        content: question.trim(),
+        content: `Context:\n${contextText}\n\nQuestion:\n${question}`,
       },
     ];
 
+    // 4️⃣ Call Groq LLM
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages,
-      // max_tokens: 512,
-      // temperature: 0.3,
     });
 
     const answer =
       completion.choices?.[0]?.message?.content?.trim() ||
       "Sorry, no answer was generated.";
 
+    // 5️⃣ Store question + answer in MongoDB
+    await ChatMessage.create({
+      userId,
+      role: "user",
+      content: question,
+      embedding: questionEmbedding,
+    });
+
+    const answerEmbedding = await embedQuery(answer);
+    await ChatMessage.create({
+      userId,
+      role: "assistant",
+      content: answer,
+      embedding: answerEmbedding,
+    });
+    // console.log("check2");
     res.json({ answer });
   } catch (error) {
-    console.error("Error in aiTeacher:", error);
+    console.error("❌ Error in aiTeacher:", error);
     res.status(500).json({ error: "Failed to process AI answer." });
   }
 };
@@ -133,36 +276,6 @@ export const grammarTeacher = async (req, res) => {
     res.status(500).json({ error: "Failed to process the question." });
   }
 };
-
-const kanjiData = JSON.parse(
-  fs.readFileSync("./ragdata/kanji_vectors.json", "utf-8")
-);
-
-function cosineSimilarity(vecA, vecB) {
-  const dot = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
-  const magA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
-  const magB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
-  return dot / (magA * magB);
-}
-
-async function getTopKRelevantChunks(query, topK = 5) {
-  const extractor = await pipeline(
-    "feature-extraction",
-    "Xenova/all-MiniLM-L6-v2"
-  );
-  const queryVector = Array.from(
-    (await extractor(query, { pooling: "mean", normalize: true })).data
-  );
-
-  const scored = kanjiData.map((entry) => ({
-    id: entry.id,
-    kanji: entry.kanji,
-    text: entry.text,
-    score: cosineSimilarity(queryVector, entry.vector),
-  }));
-
-  return scored.sort((a, b) => b.score - a.score).slice(0, topK);
-}
 
 const SYSTEM_PROMPT_KANJI = `
 You are a bilingual Kanji tutor who helps learners understand any Kanji deeply using Japanese and English.

@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api", // your backend base URL
+  baseURL: "https://ai-sensei-lej2.onrender.com", // your backend base URL
+  // "http://localhost:3000/api"
 });
 
 axiosInstance.interceptors.request.use((config) => {

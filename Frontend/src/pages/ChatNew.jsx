@@ -19,6 +19,7 @@ export default function Chat() {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState(null);
+  const [showSidebar, setShowSidebar] = useState(true);
 
   // User state
   const { user } = useContext(AuthContext);
@@ -224,7 +225,7 @@ export default function Chat() {
   // Fetch friend requests
   const fetchFriendRequests = async () => {
     try {
-      const response = await userAPI.getFriendRequests();
+      const response = await userAPI.getPendingRequests();
       setFriendRequests(response.data);
     } catch (error) {
       console.error("Failed to fetch friend requests:", error);
@@ -409,13 +410,60 @@ export default function Chat() {
     );
   }
 
+  // Function to toggle sidebar on mobile
+  const toggleSidebar = () => {
+    setShowSidebar(!showSidebar);
+  };
+
   return (
-    <div className="flex h-screen bg-white">
-      {/* Sidebar */}
-      <div className="w-1/3 border-r border-gray-200 flex flex-col">
-        <div className="border-b border-gray-200 flex">
+    <div className="flex h-screen bg-white relative">
+      {/* Mobile Toggle Button - only visible on small screens */}
+      <button
+        className="md:hidden fixed z-10 top-4 left-4 bg-black text-white p-2 rounded-md"
+        onClick={toggleSidebar}
+      >
+        {showSidebar ? (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        ) : (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        )}
+      </button>
+
+      {/* Sidebar - responsive */}
+      <div
+        className={`${
+          showSidebar ? "flex" : "hidden"
+        } md:flex md:w-1/3 w-full md:relative absolute z-10 bg-white border-r border-gray-200 flex-col`}
+      >
+        <div className="border-b border-gray-200 flex flex-wrap md:flex-nowrap">
           <button
-            className={`py-3 px-4 flex-1 text-center ${
+            className={`py-3 px-2 md:px-4 flex-1 text-center text-sm md:text-base ${
               activeTab === "chats" ? "bg-gray-100 text-black" : "text-gray-600"
             }`}
             onClick={() => setActiveTab("chats")}
@@ -423,7 +471,7 @@ export default function Chat() {
             Chats
           </button>
           <button
-            className={`py-3 px-4 flex-1 text-center ${
+            className={`py-3 px-2 md:px-4 flex-1 text-center text-sm md:text-base ${
               activeTab === "allUsers"
                 ? "bg-gray-100 text-black"
                 : "text-gray-600"
@@ -436,7 +484,7 @@ export default function Chat() {
             All Users
           </button>
           <button
-            className={`py-3 px-4 flex-1 text-center ${
+            className={`py-3 px-2 md:px-4 flex-1 text-center text-sm md:text-base ${
               activeTab === "friends"
                 ? "bg-gray-100 text-black"
                 : "text-gray-600"
@@ -449,7 +497,7 @@ export default function Chat() {
             Friends
           </button>
           <button
-            className={`py-3 px-4 flex-1 text-center relative ${
+            className={`py-3 px-2 md:px-4 flex-1 text-center relative text-sm md:text-base ${
               activeTab === "requests"
                 ? "bg-gray-100 text-black"
                 : "text-gray-600"
@@ -461,7 +509,7 @@ export default function Chat() {
           >
             Requests
             {notificationCount > 0 && (
-              <span className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded-full bg-black text-white text-xs">
+              <span className="absolute top-2 right-1 md:right-2 w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full bg-black text-white text-xs">
                 {notificationCount}
               </span>
             )}
@@ -862,7 +910,7 @@ export default function Chat() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <button
                         className="px-3 py-1 bg-black text-white text-sm rounded-md"
                         onClick={() => acceptFriendRequest(request._id)}
@@ -885,37 +933,74 @@ export default function Chat() {
       </div>
 
       {/* Chat Area */}
-      <div className="w-2/3 flex flex-col">
+      <div
+        className={`${
+          showSidebar ? "hidden" : "flex"
+        } md:flex md:w-2/3 w-full flex-col`}
+      >
         {selectedUser ? (
           <>
             {/* Chat Header */}
-            <div className="border-b border-gray-200 p-3 flex items-center">
-              <div className="relative mr-3">
-                {selectedUser.avatar ? (
-                  <img
-                    src={selectedUser.avatar}
-                    alt={selectedUser.name}
-                    className="w-10 h-10 rounded-full"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                    {selectedUser.name?.charAt(0).toUpperCase()}
+            <div className="border-b border-gray-200 p-3 flex items-center justify-between">
+              <div className="flex items-center">
+                {/* Mobile back button - only on small screens */}
+                <button
+                  className="md:hidden mr-2 text-gray-600"
+                  onClick={toggleSidebar}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                </button>
+
+                <div className="relative mr-3">
+                  {selectedUser.avatar ? (
+                    <img
+                      src={selectedUser.avatar}
+                      alt={selectedUser.name}
+                      className="w-10 h-10 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                      {selectedUser.name?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span
+                    className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                      isUserOnline(selectedUser._id)
+                        ? "bg-green-500"
+                        : "bg-gray-400"
+                    }`}
+                  ></span>
+                </div>
+                <div>
+                  <div className="font-semibold">{selectedUser.name}</div>
+                  <div className="text-xs text-gray-500">
+                    {isUserOnline(selectedUser._id) ? "Online" : "Offline"}
                   </div>
-                )}
-                <span
-                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-                    isUserOnline(selectedUser._id)
-                      ? "bg-green-500"
-                      : "bg-gray-400"
-                  }`}
-                ></span>
-              </div>
-              <div>
-                <div className="font-semibold">{selectedUser.name}</div>
-                <div className="text-xs text-gray-500">
-                  {isUserOnline(selectedUser._id) ? "Online" : "Offline"}
                 </div>
               </div>
+
+              {/* Add Friend Button */}
+              {!friends.some((friend) => friend._id === selectedUser._id) && (
+                <button
+                  className="px-3 py-1 bg-black text-white text-sm rounded-md"
+                  onClick={() => sendFriendRequest(selectedUser._id)}
+                >
+                  Add Friend
+                </button>
+              )}
             </div>
 
             {/* Messages */}
@@ -999,10 +1084,21 @@ export default function Chat() {
                 />
                 <button
                   type="submit"
-                  className="bg-black text-white px-4 py-2 rounded-r-md"
+                  className="bg-black text-white px-3 sm:px-4 py-2 rounded-r-md"
                   disabled={!chatInput.trim()}
                 >
-                  <i className="fa fa-paper-plane"></i>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
                 </button>
               </form>
             </div>
@@ -1010,15 +1106,36 @@ export default function Chat() {
         ) : (
           <div className="flex flex-col justify-center items-center h-full bg-gray-50">
             <div className="text-center p-6">
+              <div className="mb-4 hidden md:block">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-16 w-16 mx-auto text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+              </div>
               <h3 className="text-xl font-semibold mb-2">
                 Welcome to Messages
               </h3>
               <p className="text-gray-500 mb-4">
-                Select a conversation or start a new one
+                {showSidebar
+                  ? "Select a conversation to start chatting"
+                  : "Tap the menu button to see your conversations"}
               </p>
               <button
                 className="px-4 py-2 bg-black text-white rounded-md"
-                onClick={() => setActiveTab("allUsers")}
+                onClick={() => {
+                  setActiveTab("allUsers");
+                  if (!showSidebar) toggleSidebar(); // On mobile, show the sidebar when clicking Find Users
+                }}
               >
                 Find Users
               </button>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -16,18 +17,38 @@ export default function Login() {
     setLoading(true);
     try {
       await login({ email, password });
-      navigate("/");
-    } catch {
-      setError("Invalid credentials");
+      toast.success("Login successful!", {
+        position: "top-right",
+        autoClose: 2000,
+        style: {
+          backgroundColor: "#000", // black background
+          border: "1px solid lightgrey", // light grey border
+          color: "#fff", // white text
+        },
+      });
+
+      navigate("/"); // Navigate to the desired route after login
+    } catch (err) {
+      setError("Login failed");
+      toast.error("Login failed. Please try again.", {
+        position: "top-right",
+        autoClose: 2000,
+        style: {
+          backgroundColor: "#000", // black background
+          border: "1px solid lightgrey", // light grey border
+          color: "#fff", // white text
+        },
+      });
+      console.log(err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen min-h-[100dvh] flex items-center justify-center bg-white px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md border border-black/20 bg-white p-6 sm:p-10 rounded-lg shadow-lg">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-black mb-6 text-center">
+        <h1 className="text-4xl font-extrabold text-black mb-10 text-center font-sans tracking-tight">
           Login
         </h1>
 

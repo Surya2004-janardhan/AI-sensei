@@ -1,8 +1,11 @@
 import axiosInstance from "./axiosInstance";
 
-const askTeacher = (data) => axiosInstance.post("/ai/teacher", data); // Example endpoint
-const grammarTeacher =  (data) => axiosInstance.post("/ai/grammar", data); // Example endpoint 
+const askTeacher = (data) => axiosInstance.post("/ai/teacher", data);
+const grammarTeacher = (data) => axiosInstance.post("/ai/grammar", data);
+const kanjiTeacher = (data) => axiosInstance.post("/ai/kanjiTeacher", data);
+
 export default {
   askTeacher,
-  grammarTeacher
+  grammarTeacher,
+  kanjiTeacher,
 };

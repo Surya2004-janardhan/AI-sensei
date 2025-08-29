@@ -1,5 +1,5 @@
 // const { callAIGPT } = require("../services/aiService");
-import Groq from "groq-sdk";
+const Groq = require("groq-sdk");
 // console.log(process.env.GROQ_API_KEY);
 // const apiKey = process.env.GROQ_API_KEY?.replace(/(\r\n|\n|\r)/gm, "").trim();
 // console.log('apiKey: ', apiKey);
@@ -8,9 +8,63 @@ import Groq from "groq-sdk";
 // }else{
 //   console.log("key is there")
 // }
+const { ChatMessage } = require("../models/Chat");
+const fs = require("fs");
+const path = require("path");
+const { pipeline } = require("@xenova/transformers");
 
+// Load grammar database
+function getVectorDB() {
+  try {
+    const grammarPath = path.join(
+      process.cwd(),
+      "controllers",
+      "grammar_DB.json"
+    );
+    return JSON.parse(fs.readFileSync(grammarPath, "utf-8"));
+  } catch (error) {
+    console.error("Error loading grammar DB:", error);
+    return [];
+  }
+}
+
+// Load kanji data
+function getKanjiData() {
+  try {
+    const kanjiPath = path.join(process.cwd(), "ragdata", "kanji_vectors.json");
+    return JSON.parse(fs.readFileSync(kanjiPath, "utf-8"));
+  } catch (error) {
+    console.error("Error loading kanji data:", error);
+    return [];
+  }
+}
+
+async function getTopKRelevantChunks(query, topK = 5) {
+  try {
+    const extractor = await pipeline(
+      "feature-extraction",
+      "Xenova/all-MiniLM-L6-v2"
+    );
+    const queryVector = Array.from(
+      (await extractor(query, { pooling: "mean", normalize: true })).data
+    );
+
+    const kanjiData = getKanjiData();
+    const scored = kanjiData.map((entry) => ({
+      id: entry.id,
+      kanji: entry.kanji,
+      text: entry.text,
+      score: cosineSimilarity(queryVector, entry.vector || entry.embedding),
+    }));
+
+    return scored.sort((a, b) => b.score - a.score).slice(0, topK);
+  } catch (error) {
+    console.error("Error in getTopKRelevantChunks:", error);
+    return [];
+  }
+}
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: "",
 });
 
 const SYSTEM_PROMPT = `
@@ -39,72 +93,134 @@ You are a bilingual AI teacher fluent in English and Japanese, designed to assis
 Your goal is to provide clear, bilingual answers in a teaching-friendly format.
 `;
 
-export const aiTeacher = async (req, res) => {
-  try {
-    const { question } = req.body;
-    if (!question || !question.trim()) {
-      return res.status(400).json({ error: "Question is required." });
-    }
+function cosineSimilarity(vecA, vecB) {
+  const dot = vecA.reduce((sum, a, i) => sum + a * (vecB[i] || 0), 0);
+  const magA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+  const magB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
+  return dot / (magA * magB + 1e-8);
+}
 
+// ---------------------- Embedding Function ----------------------
+async function embedQuery(query) {
+  const extractor = await pipeline(
+    "feature-extraction",
+    "Xenova/all-MiniLM-L6-v2"
+  );
+  const vector = Array.from(
+    (await extractor(query, { pooling: "mean", normalize: true })).data
+  );
+  return vector;
+}
+
+// export const aiTeacher = async (req, res) => {
+//   try {
+//     const { question } = req.body;
+//     if (!question || !question.trim()) {
+//       return res.status(400).json({ error: "Question is required." });
+//     }
+
+//     const messages = [
+//       {
+//         role: "system",
+//         content: SYSTEM_PROMPT,
+//       },
+//       {
+//         role: "user",
+//         content: question.trim(),
+//       },
+//     ];
+
+//     const completion = await groq.chat.completions.create({
+//       model: "llama-3.3-70b-versatile",
+//       messages,
+//       // max_tokens: 512,
+//       // temperature: 0.3,
+//     });
+
+//     const answer =
+//       completion.choices?.[0]?.message?.content?.trim() ||
+//       "Sorry, no answer was generated.";
+
+//     res.json({ answer });
+//   } catch (error) {
+//     console.error("Error in aiTeacher:", error);
+//     res.status(500).json({ error: "Failed to process AI answer." });
+//   }
+// };
+
+exports.aiTeacher = async (req, res) => {
+  try {
+    // console.log("inside of aiTeacher");
+    const { question, userId } = req.body;
+    if (!question?.trim() || !userId) {
+      return res
+        .status(400)
+        .json({ error: "Question and userId are required." });
+    }
+    // console.log("check0");
+
+    // 1️⃣ Compute embedding for current question
+    const questionEmbedding = await embedQuery(question);
+    // console.log("check1");
+
+    // 2️⃣ Retrieve user's previous messages
+    const allMessages = (await ChatMessage.find({ userId })) || [];
+    const scored = allMessages.map((msg) => ({
+      msg,
+      score: cosineSimilarity(msg.embedding, questionEmbedding),
+    }));
+    const topRelevant = scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5) // top 5 relevant
+      .map((s) => s.msg);
+
+    const contextText = topRelevant
+      .map((m) => `${m.role}: ${m.content}`)
+      .join("\n");
+
+    // 3️⃣ Prepare messages for Groq
     const messages = [
-      {
-        role: "system",
-        content: SYSTEM_PROMPT,
-      },
+      { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
-        content: question.trim(),
+        content: `Context:\n${contextText}\n\nQuestion:\n${question}`,
       },
     ];
 
+    // 4️⃣ Call Groq LLM
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages,
-      // max_tokens: 512,
-      // temperature: 0.3,
     });
 
     const answer =
       completion.choices?.[0]?.message?.content?.trim() ||
       "Sorry, no answer was generated.";
 
+    // 5️⃣ Store question + answer in MongoDB
+    await ChatMessage.create({
+      userId,
+      role: "user",
+      content: question,
+      embedding: questionEmbedding,
+    });
+
+    const answerEmbedding = await embedQuery(answer);
+    await ChatMessage.create({
+      userId,
+      role: "assistant",
+      content: answer,
+      embedding: answerEmbedding,
+    });
+    // console.log("check2");
     res.json({ answer });
   } catch (error) {
-    console.error("Error in aiTeacher:", error);
+    console.error("❌ Error in aiTeacher:", error);
     res.status(500).json({ error: "Failed to process AI answer." });
   }
 };
 
-function cosineSimilarity(a, b) {
-  const dot = a.reduce((acc, val, i) => acc + val * b[i], 0);
-  const magA = Math.sqrt(a.reduce((acc, val) => acc + val * val, 0));
-  const magB = Math.sqrt(b.reduce((acc, val) => acc + val * val, 0));
-  return dot / (magA * magB);
-}
-
-async function embedQuery(query) {
-  const res = await fetch("https://api.groq.com/openai/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization:
-        "Bearer <keep api later>",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "nomic-embed-text-v1",
-      input: query,
-    }),
-  });
-  const json = await res.json();
-  return json?.data?.[0]?.embedding;
-}
-
-function getVectorDB() {
-  const dbPath = path.join(process.cwd(), "grammar_DB.json");
-  return JSON.parse(fs.readFileSync(dbPath, "utf-8"));
-}
-
-export const grammarTeacher = async (req, res) => {
+exports.grammarTeacher = async (req, res) => {
   try {
     const { question } = req.body;
 
@@ -158,5 +274,60 @@ export const grammarTeacher = async (req, res) => {
   } catch (error) {
     console.error("❌ Error in grammarTeacher:", error);
     res.status(500).json({ error: "Failed to process the question." });
+  }
+};
+
+const SYSTEM_PROMPT_KANJI = `
+You are a bilingual Kanji tutor who helps learners understand any Kanji deeply using Japanese and English.
+
+👩‍🏫 Your Job:
+- Use the given Kanji entries and user query to explain and answer clearly.
+- All Japanese must be in Hiragana and Katakana (use Kanji only when needed).
+- Translate every Japanese sentence into English.
+- Add emojis for key concepts (e.g. 🌸, 🔤, 📖).
+- No romaji.
+
+⛩️ Your responses must:
+- Give short explanations if the question is basic (like "what does 暗 mean?").
+- Be 200+ words for deeper queries (e.g. how 暗 differs from 闇).
+- Pull meaning, readings, and context from the given Kanji chunks.
+`;
+
+exports.kanjiTeacher = async (req, res) => {
+  try {
+    const { question } = req.body;
+    if (!question || !question.trim()) {
+      return res.status(400).json({ error: "Question is required." });
+    }
+
+    const topChunks = await getTopKRelevantChunks(question);
+    const context = topChunks
+      .map((chunk, i) => `#${i + 1}: ${chunk.text}`)
+      .join("\n");
+
+    const messages = [
+      {
+        role: "system",
+        content: SYSTEM_PROMPT_KANJI,
+      },
+      {
+        role: "user",
+        content: `User Query: ${question}\n\nRelevant Kanji Info:\n${context}`,
+      },
+    ];
+
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages,
+    });
+
+    const answer =
+      completion.choices?.[0]?.message?.content?.trim() ||
+      "Sorry, no answer was generated.";
+
+    res.json({ answer });
+  } catch (error) {
+    console.error("Error in kanjiTeacher:", error);
+    res.status(500).json({ error: "Failed to process Kanji teacher answer." });
   }
 };

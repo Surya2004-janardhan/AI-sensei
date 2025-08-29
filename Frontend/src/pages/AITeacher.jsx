@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import aiAPI from "../api/ai.js";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function AITeacher() {
+  const { user } = useAuth();
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,12 +31,21 @@ export default function AITeacher() {
     e.preventDefault();
     if (!question.trim()) return;
 
+    // Check if user is authenticated
+    if (!user || !user._id) {
+      setError("You must be logged in to ask questions.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setAnswer("");
 
     try {
-      const res = await aiAPI.askTeacher({ question });
+      const res = await aiAPI.askTeacher({
+        question: question.trim(),
+        userId: user._id,
+      });
       const newAnswer = res.data.answer;
 
       setAnswer(newAnswer);

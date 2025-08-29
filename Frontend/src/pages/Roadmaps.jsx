@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 
-// Roadmap nodes for N5 and N4 levels (can scroll horizontally)
 const roadmapNodes = [
   // N5
   {
@@ -9,7 +8,6 @@ const roadmapNodes = [
     icon: "📚",
     label: "Vocabulary & Kanji",
     desc: "800+ words,\n100+ kanji",
-    colorClass: "border-primary text-primary",
   },
   {
     id: "n5-2",
@@ -17,7 +15,6 @@ const roadmapNodes = [
     icon: "📝",
     label: "Grammar",
     desc: "Core grammar points",
-    colorClass: "border-primary text-primary",
   },
   {
     id: "n5-3",
@@ -25,7 +22,6 @@ const roadmapNodes = [
     icon: "🎧",
     label: "Listening",
     desc: "Audio & tests",
-    colorClass: "border-primary text-primary",
   },
   {
     id: "n5-4",
@@ -33,7 +29,6 @@ const roadmapNodes = [
     icon: "🔄",
     label: "Revision",
     desc: "Reviews & flashcards",
-    colorClass: "border-primary text-primary",
   },
   {
     id: "n5-5",
@@ -41,7 +36,6 @@ const roadmapNodes = [
     icon: "📝🕒",
     label: "Mock Exams",
     desc: "Timed practice sets",
-    colorClass: "border-primary text-primary",
   },
   {
     id: "n5-6",
@@ -49,17 +43,15 @@ const roadmapNodes = [
     icon: "📚📖",
     label: "Books & References",
     desc: "Top N5 materials",
-    colorClass: "border-primary text-primary",
   },
 
-  // N4
+  // N4 (unchanged)
   {
     id: "n4-1",
     level: "N4",
     icon: "📚",
     label: "Vocabulary & Kanji",
     desc: "1500+ words,\n300+ kanji",
-    colorClass: "border-secondary text-secondary",
   },
   {
     id: "n4-2",
@@ -67,7 +59,6 @@ const roadmapNodes = [
     icon: "📝",
     label: "Grammar",
     desc: "Expanded grammar list",
-    colorClass: "border-secondary text-secondary",
   },
   {
     id: "n4-3",
@@ -75,7 +66,6 @@ const roadmapNodes = [
     icon: "🎧",
     label: "Listening",
     desc: "Longer dialogues & tests",
-    colorClass: "border-secondary text-secondary",
   },
   {
     id: "n4-4",
@@ -83,7 +73,6 @@ const roadmapNodes = [
     icon: "🔄",
     label: "Revision",
     desc: "Practice & flashcards",
-    colorClass: "border-secondary text-secondary",
   },
   {
     id: "n4-5",
@@ -91,7 +80,6 @@ const roadmapNodes = [
     icon: "📝🕒",
     label: "Mock Exams",
     desc: "Practice sets & past papers",
-    colorClass: "border-secondary text-secondary",
   },
   {
     id: "n4-6",
@@ -99,20 +87,16 @@ const roadmapNodes = [
     icon: "📚📖",
     label: "Books & References",
     desc: "Best N4 textbooks",
-    colorClass: "border-secondary text-secondary",
   },
 ];
 
 export default function Roadmaps() {
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [error] = useState("");
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-
-  // Open external link safely in new tab
-  const openLink = (url) => window.open(url, "_blank", "noopener,noreferrer");
 
   return (
     <div className="min-h-screen bg-white px-6 py-6 font-sans text-black max-w-6xl mx-auto">
@@ -123,33 +107,20 @@ export default function Roadmaps() {
       {loading && <p className="text-center text-black/70 mb-6">Loading...</p>}
       {error && <p className="text-center text-red-600 mb-6">{error}</p>}
 
-      {/* Horizontally scrollable roadmap summary bar */}
       <nav
         aria-label="JLPT N5 and N4 roadmap summary"
         className="mb-12 overflow-x-auto w-full no-scrollbar"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         <ul className="flex space-x-6 min-w-max px-2">
-          {roadmapNodes.map(({ id, icon, label, desc, colorClass, level }) => (
+          {roadmapNodes.map(({ id, icon, label, desc, level }) => (
             <li
               key={id}
-              className={`flex-shrink-0 rounded-lg px-6 py-4 shadow-md border ${colorClass} cursor-default select-none max-w-xs hover:shadow-lg transition`}
+              className="flex-shrink-0 rounded-lg px-6 py-4 shadow-md border border-black cursor-default select-none max-w-xs hover:shadow-lg hover:bg-black  hover:text-white transition-all duration-300"
               title={`${level} - ${label}`}
             >
-              <div
-                className={`text-4xl mb-2 ${colorClass.replace(
-                  "border-",
-                  "text-"
-                )}`}
-              >
-                {icon}
-              </div>
-              <h3
-                className={`font-semibold text-lg mb-1 ${colorClass.replace(
-                  "border-",
-                  "text-"
-                )}`}
-              >
+              <div className="text-4xl mb-2">{icon}</div>
+              <h3 className="font-semibold text-lg mb-1">
                 {label} ({level})
               </h3>
               <p className="text-sm text-black/70 whitespace-pre-line">
@@ -160,7 +131,6 @@ export default function Roadmaps() {
         </ul>
       </nav>
 
-      {/* Detailed Section Boxes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* N5 Section */}
         <div className="space-y-8">
@@ -182,12 +152,16 @@ export default function Roadmaps() {
                 desc: "N5 kanji with readings, stroke order, and drills.",
               },
               {
-                href: "https://www.youtube.com/playlist?list=PLVK0LaL0vdqcELV_4lIwau0LOvP9r91si",
-                label: "NihonGoal Vocabulary & Grammar Playlist",
-                desc: "Stepwise N5 vocabulary/grammar breakdowns (YouTube).",
+                href: "https://www.youtube.com/playlist?list=PLwLWi85AM8x9db_nVXejJlB5i-M2XwvG-",
+                label: "N5 Vocabulary & Sentence (TOMO sensei)",
+                desc: "JLPT N5 vocab with sample sentences.",
+              },
+              {
+                href: "https://www.youtube.com/playlist?list=PLag_mhJfCJ-1-EZcPapMFPTlzVzwjz33M",
+                label: "Minna No Nihongo Lessons (NihonGoal)",
+                desc: "Structured lessons covering vocab & grammar.",
               },
             ]}
-            colorClass="border-primary text-primary"
           />
 
           <ResourceCard
@@ -196,44 +170,61 @@ export default function Roadmaps() {
               {
                 href: "https://japanesetest4you.com/jlpt-n5-grammar-list/",
                 label: "JLPT N5 Grammar List (JapaneseTest4You)",
-                desc: "Complete grammar points (with printables).",
+                desc: "Complete grammar points with examples.",
               },
               {
                 href: "https://www.youtube.com/playlist?list=PLVK0LaL0vdqdTW8NgkopZTbsnbhKZX_hL",
                 label: "NihonGoal N5 Grammar Playlist",
-                desc: "Highly recommended video grammar series (YouTube).",
+                desc: "Structured grammar lessons on YouTube.",
+              },
+              {
+                href: "https://www.youtube.com/playlist?list=PLwLWi85AM8x90jB7kB_hq_Z_cbjgZoSuV",
+                label: "N5 Vocabulary – Read in 3 seconds (TOMO sensei)",
+                desc: "Quick-fire grammar/vocab drills.",
               },
             ]}
-            colorClass="border-primary text-primary"
           />
 
           <ResourceCard
             title="Listening & Practice Tests"
             links={[
               {
-                href: "https://www.youtube.com/playlist?list=PL7JD705Ot0JFL2rKqLE7qokt8rqCg5hNz",
-                label: "TOMO sensei JLPT N5 Practice Playlist",
-                desc: "Mock tests, listening, and kanji quizzes (YouTube).",
+                href: "https://www.youtube.com/playlist?list=PLwLWi85AM8x-HxRw6efxBr1wNCuH8y2ZJ",
+                label: "N5 Listening Sample Test (TOMO sensei)",
+                desc: "JLPT N5 listening test practice.",
               },
               {
-                href: "https://www.youtube.com/@TOMOsensei",
-                label: "Visit TOMO Sensei Channel",
-                desc: "All playlists (find N5 Kanji/Vocab/Listening drills).",
+                href: "https://www.youtube.com/playlist?list=PLwLWi85AM8x9db_nVXejJlB5i-M2XwvG-",
+                label: "Again: N5 Vocabulary & Sentence (TOMO sensei)",
+                desc: "Alternative listening-based practice.",
+              },
+              {
+                href: "https://www.youtube.com/playlist?list=PLag_mhJfCJ-18WyYoklCPxIpYbeRgmWLJ",
+                label: "NihonGoal Grammar Lessons (N5/N4)",
+                desc: "Mixed grammar/listening structured lessons.",
               },
             ]}
-            colorClass="border-primary text-primary"
           />
 
           <ResourceCard
-            title="Revision & Practice"
+            title="Revision & Mock Exams"
             links={[
               {
-                href: "https://jlptsensei.com/downloads/jlpt-n5-practice-test/",
-                label: "JLPT N5 Official Practice Test (PDF)",
-                desc: "Downloadable practice test with answer keys.",
+                href: "https://www.jlpt.jp/e/samples/sampleindex.html",
+                label: "JLPT Official Practice Workbook N5",
+                desc: "Official workbook with listening audio & answer sheets.",
+              },
+              {
+                href: "https://www.youtube.com/playlist?list=PLwLWi85AM8x-HxRw6efxBr1wNCuH8y2ZJ",
+                label: "Repeat: N5 Listening Sample Test (TOMO sensei)",
+                desc: "Extra listening mock tests.",
+              },
+              {
+                href: "https://www.youtube.com/playlist?list=PLag_mhJfCJ-1-EZcPapMFPTlzVzwjz33M",
+                label: "Minna No Nihongo Lessons (NihonGoal)",
+                desc: "For reinforced revision.",
               },
             ]}
-            colorClass="border-primary text-primary"
           />
 
           <ResourceCard
@@ -242,7 +233,7 @@ export default function Roadmaps() {
               {
                 href: "https://migii.net/en/blog/jlpt-n5-books",
                 label: "Free JLPT N5 Books PDF",
-                desc: "Beginner textbooks for self-study.",
+                desc: "Beginner textbooks and guides.",
               },
               {
                 href: "https://www.amazon.in/nihongo-so-matome-n5/dp/4789014406",
@@ -252,10 +243,9 @@ export default function Roadmaps() {
               {
                 href: "https://www.amazon.in/goukaku-dekiru-jlpt-n5/dp/4872176752",
                 label: "Goukaku Dekiru JLPT N5 (Amazon)",
-                desc: "Extensive mock tests/book explanations.",
+                desc: "Extensive mock tests with explanations.",
               },
             ]}
-            colorClass="border-primary text-primary"
           />
         </div>
 
@@ -265,13 +255,14 @@ export default function Roadmaps() {
             JLPT N4 Study Resources
           </h2>
 
+          {/* N4 cards remain as before */}
           <ResourceCard
             title="Vocabulary & Kanji"
             links={[
               {
                 href: "https://jlptsensei.com/jlpt-n4-vocabulary-list/",
                 label: "JLPT N4 Vocabulary List (JLPT Sensei)",
-                desc: "Extensive vocabulary with kanji and example sentences.",
+                desc: "Extensive vocabulary with example sentences.",
               },
               {
                 href: "https://jlptsensei.com/jlpt-n4-kanji-list/",
@@ -279,12 +270,16 @@ export default function Roadmaps() {
                 desc: "N4 kanji with readings, stroke order, and practice.",
               },
               {
-                href: "https://www.youtube.com/playlist?list=PLVK0LaL0vdqd8nVjSMDhPBW25nx7Ea5wV",
-                label: "NihonGoal Vocabulary & Grammar Playlist N4",
-                desc: "Stepwise N4 vocabulary and grammar tutorials (YouTube).",
+                href: "https://www.youtube.com/playlist?list=PLag_mhJfCJ-2sBVFtpD-tI79jmR4G02lN",
+                label: "NihonGoal N4 Minna no Nihongo Lessons",
+                desc: "Structured vocabulary & grammar lessons (N4).",
+              },
+              {
+                href: "https://www.youtube.com/playlist?list=PLwLWi85AM8x8y-nJ8Tr2E1ERRYxhhC0Al",
+                label: "TOMO sensei All JLPT N4 Vocabulary",
+                desc: "Vocab read 3× (slow → native speed) for shadowing.",
               },
             ]}
-            colorClass="border-secondary text-secondary"
           />
 
           <ResourceCard
@@ -296,41 +291,49 @@ export default function Roadmaps() {
                 desc: "Comprehensive grammar points for N4.",
               },
               {
-                href: "https://www.youtube.com/playlist?list=PLVK0LaL0vdqeunI8B1UR0nDXu9a69imid",
-                label: "NihonGoal N4 Grammar Playlist",
-                desc: "Detailed video grammar lessons (YouTube).",
+                href: "https://www.youtube.com/playlist?list=PLag_mhJfCJ-18WyYoklCPxIpYbeRgmWLJ",
+                label: "NihonGoal N5/N4 Grammar Lessons",
+                desc: "Grammar instruction covering both N5 and N4.",
+              },
+              {
+                href: "https://www.youtube.com/playlist?list=PLwLWi85AM8x8y-nJ8Tr2E1ERRYxhhC0Al", // reuse vocab playlist if grammar mixed
+                label: "TOMO sensei Vocabulary/Grammar Mix",
+                desc: "Mixed grammar/vocab exposure for N4.",
               },
             ]}
-            colorClass="border-secondary text-secondary"
           />
 
           <ResourceCard
             title="Listening & Practice Tests"
             links={[
               {
-                href: "https://www.youtube.com/playlist?list=PLB5C2rg0LmeQMtk9nbylpb3COkuyBTJQQ",
-                label: "TOMO sensei JLPT N4 Practice Playlist",
-                desc: "Listening practice and mock tests (YouTube).",
+                href: "https://www.youtube.com/playlist?list=PLb2UCnI22u9mCw8I-zADae6GH0ieRrkHq",
+                label: "NihonGoal N4 Listening Training",
+                desc: "Day-by-day listening practice for N4.",
               },
               {
-                href: "https://www.youtube.com/@TOMOsensei",
-                label: "Visit TOMO Sensei Channel",
-                desc: "All relevant playlists for Kanji, Vocab, Listening drills.",
+                href: "https://www.youtube.com/playlist?list=PLwLWi85AM8x8y-nJ8Tr2E1ERRYxhhC0Al", // fallback vocabulary playlist
+                label:
+                  "TOMO sensei All JLPT N4 Vocabulary (listening-friendly)",
+                desc: "Vocab read aloud—good listening/shadowing practice.",
               },
             ]}
-            colorClass="border-secondary text-secondary"
           />
 
           <ResourceCard
-            title="Revision & Practice"
+            title="Revision & Mock Exams"
             links={[
               {
-                href: "https://jlptsensei.com/downloads/jlpt-n4-practice-test/",
-                label: "JLPT N4 Official Practice Test (PDF)",
-                desc: "View or download official practice material.",
+                href: "https://www.youtube.com/playlist?list=PLag_mhJfCJ-2sBVFtpD-tI79jmR4G02lN",
+                label: "NihonGoal Minna no Nihongo N4",
+                desc: "For structured revision.",
+              },
+              {
+                href: "https://www.youtube.com/playlist?list=PLwLWi85AM8x8y-nJ8Tr2E1ERRYxhhC0Al",
+                label: "TOMO sensei All JLPT N4 Vocabulary (extra review)",
+                desc: "Reinforce via repeated exposure.",
               },
             ]}
-            colorClass="border-secondary text-secondary"
           />
 
           <ResourceCard
@@ -339,75 +342,51 @@ export default function Roadmaps() {
               {
                 href: "https://migii.net/en/blog/jlpt-n4-books",
                 label: "Free JLPT N4 Books PDF",
-                desc: "Great self-study beginner to intermediate books.",
+                desc: "Self-study textbooks and guides.",
               },
               {
                 href: "https://www.amazon.in/dp/4789014414",
                 label: "Nihongo So-Matome N4 (Amazon)",
-                desc: "Trusted study series for N4 learners.",
+                desc: "Trusted N4 study series.",
               },
               {
                 href: "https://www.amazon.in/dp/4838802909",
                 label: "Try! JLPT N4 Grammar (Amazon)",
-                desc: "Excellent grammar workbook for N4.",
+                desc: "Great grammar workbook for N4.",
               },
             ]}
-            colorClass="border-secondary text-secondary"
           />
         </div>
       </div>
 
-      {/* Scrollbar hide */}
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* Custom colors (adjust these to fit your color palette) */
-        .border-primary { border-color: #1866c5; }
-        .text-primary { color: #1866c5; }
-        .border-secondary { border-color: #d9534f; }
-        .text-secondary { color: #d9534f; }
-
-        a:hover {
-          text-decoration: underline;
-        }
       `}</style>
     </div>
   );
 }
 
-/**
- * ResourceCard component: Displays a card with a title and a list of resource links.
- * Props:
- *  - title: string (section name)
- *  - links: array of objects { href, label, desc }
- *  - colorClass: string (tailwind classes for border & text colors)
- */
-function ResourceCard({ title, links, colorClass }) {
+function ResourceCard({ title, links }) {
   return (
     <div
-      className={`border ${colorClass} rounded-lg p-6 shadow-md hover:shadow-xl transition cursor-default select-none`}
+      className="border border-black rounded-lg p-6 shadow-md hover:shadow-xl transition-all duration-300 cursor-default select-none bg-white hover:bg-black hover:text-white"
       tabIndex={0}
       aria-label={title}
     >
-      <h3 className={`text-xl font-semibold mb-4 font-serifJapanese`}>
-        {title}
-      </h3>
-      <ul className="space-y-4 text-black/90">
+      <h3 className="text-xl font-semibold mb-4 font-serifJapanese">{title}</h3>
+      <ul className="space-y-4">
         {links.map(({ href, label, desc }) => (
           <li key={href}>
             <a
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className={`font-medium text-${
-                colorClass.includes("primary") ? "primary" : "secondary"
-              } underline hover:no-underline`}
-              title={label}
+              className="font-medium underline hover:no-underline"
             >
               {label}
             </a>
-            <p className="text-sm text-black/70 whitespace-pre-wrap leading-snug">
+            <p className="text-sm opacity-80 whitespace-pre-wrap leading-snug">
               {desc}
             </p>
           </li>

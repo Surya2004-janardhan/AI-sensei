@@ -4,6 +4,9 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Home from "./pages/Home.jsx";
@@ -13,9 +16,9 @@ import Roadmaps from "./pages/Roadmaps.jsx";
 import Quiz from "./pages/Quiz.jsx";
 import AITeacher from "./pages/AITeacher.jsx";
 import DoubtSolver from "./pages/DoubtSolver.jsx";
-import Chat from "./pages/Chat.jsx";
+import Chat from "./pages/ChatNew.jsx";
 import Navbar from "./components/Navbar.jsx";
-import { useAuth } from "./contexts/AuthContext.jsx";
+import { useAuth } from "./contexts/AuthContext";
 
 function App() {
   const { user, loading } = useAuth();
@@ -52,7 +55,7 @@ function App() {
   return (
     <Router>
       <Navbar />
-      <main className="min-h-screen w-full font-japanese text-text-primary bg-white">
+      <main className=" min-h-dvh w-full font-japanese text-text-primary bg-white">
         <Routes>
           <Route
             path="/login"
@@ -96,6 +99,18 @@ function App() {
           />
           {/* Add 404 or redirect route here if desired */}
         </Routes>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          theme="dark"
+          toastStyle={{
+            backgroundColor: "black",
+            color: "white",
+          }}
+          progressStyle={{
+            backgroundColor: "white",
+          }}
+        />
       </main>
     </Router>
   );

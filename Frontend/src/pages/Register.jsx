@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { register } from "../api/auth";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -15,15 +16,33 @@ export default function Register() {
     e.preventDefault();
     setError("");
     setLoading(true); // start loaderrs
-    
+
     try {
       const res = await register({ email, password, name });
       console.log(res.data.user);
       if (res.data.user) {
+        toast.success("Registration successful!", {
+          position: "top-right",
+          autoClose: 2000,
+          style: {
+            backgroundColor: "#000", // black background
+            border: "1px solid lightgrey", // light grey border
+            color: "#fff", // white text
+          },
+        });
         navigate("/");
         return;
       }
     } catch {
+      toast.success("Registration successful!", {
+        position: "top-right",
+        autoClose: 2000,
+        style: {
+          backgroundColor: "#000", // black background
+          border: "1px solid lightgrey", // light grey border
+          color: "#fff", // white text
+        },
+      });
       console.log("failed");
       setError("User with same email exists");
     } finally {

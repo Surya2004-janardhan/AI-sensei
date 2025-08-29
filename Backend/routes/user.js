@@ -24,6 +24,9 @@ router.put("/profile", auth, updateProfile);
 // Get all users
 router.get("/all", auth, getAllUsers);
 
+// Notifications
+router.get("/notifications/count", auth, getNotificationsCount);
+
 // Friends and connections
 router.get("/friends", auth, getFriends);
 router.post("/friends/request/:userId", auth, sendFriendRequest);
@@ -34,8 +37,5 @@ router.delete("/friends/:userId", auth, removeFriend);
 
 // Get user by ID (this should be after specific routes)
 router.get("/:id", auth, getUserById);
-
-// Notifications
-router.get("/notifications/count", auth, getNotificationsCount);
 
 module.exports = router;

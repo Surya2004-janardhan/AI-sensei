@@ -1,0 +1,12 @@
+/* Custom Toast Styles */
+.Toastify__progress-bar {
+  background: white !important;
+}
+
+.Toastify__toast--dark .Toastify__progress-bar {
+  background: white !important;
+}
+
+.Toastify__progress-bar--success {
+  background: white !important;
+}

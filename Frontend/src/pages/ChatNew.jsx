@@ -10,6 +10,7 @@ import * as userAPI from "../api/user";
 import { AuthContext } from "../contexts/AuthContext";
 import { io } from "socket.io-client";
 import { toast } from "react-toastify";
+import "../styles/toast.css";
 // Using Tailwind CSS instead of custom CSS
 
 export default function Chat() {
@@ -40,10 +41,12 @@ export default function Chat() {
   const [notificationCount, setNotificationCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false); // Track loading state for users
+  const [usersFetched, setUsersFetched] = useState(false); // Track if users have been fetched
 
-  // Load sent friend requests from localStorage and set up periodic checks
+  // Split into two separate effects to avoid dependency issues
+
+  // 1. Load sent friend requests from localStorage once on component mount
   useEffect(() => {
-    // Load from localStorage initially
     try {
       const storedRequests = localStorage.getItem("sentFriendRequests");
       if (storedRequests) {
@@ -55,54 +58,61 @@ export default function Chat() {
         error
       );
     }
+  }, []); // Empty dependency array = run once on mount
+
+  // 2. Periodic check for friend request status changes, with proper error handling
+  useEffect(() => {
+    // Skip if no user or no requests to check
+    if (!user || !user._id) return;
 
     // Function to verify friend request status
     const checkFriendRequestStatus = async () => {
-      if (!user || sentRequests.length === 0) return;
+      // Get latest from state to avoid stale closures
+      const currentSentRequests =
+        JSON.parse(localStorage.getItem("sentFriendRequests")) || [];
+      if (currentSentRequests.length === 0) return;
 
       try {
         // Check if any sent requests have been accepted by fetching friends list
         const friendsResponse = await userAPI.getFriends();
+        if (!friendsResponse || !friendsResponse.data) return;
+
         const currentFriends = friendsResponse.data;
 
         // For each friend, if they're in our sentRequests list, they've accepted
         const acceptedRequests = currentFriends
-          .filter((friend) => sentRequests.includes(friend._id))
+          .filter((friend) => currentSentRequests.includes(friend._id))
           .map((friend) => friend._id);
 
-        // Remove accepted requests from sentRequests
+        // Remove accepted requests from sentRequests only if there are any
         if (acceptedRequests.length > 0) {
-          const updatedRequests = sentRequests.filter(
+          const updatedRequests = currentSentRequests.filter(
             (id) => !acceptedRequests.includes(id)
           );
 
-          // Update state and localStorage
-          setSentRequests(updatedRequests);
+          // Update localStorage
           localStorage.setItem(
             "sentFriendRequests",
             JSON.stringify(updatedRequests)
           );
 
-          // Update UI
-          toast.success(
-            `${acceptedRequests.length > 1 ? "Multiple" : "A"} friend request${
-              acceptedRequests.length > 1 ? "s were" : " was"
-            } accepted!`
-          );
+          // Update state (won't cause infinite loop since it's in a different useEffect)
+          setSentRequests(updatedRequests);
         }
       } catch (error) {
         console.error("Error checking friend request status:", error);
+        // Don't retry on error to avoid overwhelming the server
       }
     };
 
-    // Check periodically (every 30 seconds)
-    const interval = setInterval(checkFriendRequestStatus, 30000);
-
-    // Check once on component mount
+    // Run check once immediately when user changes
     checkFriendRequestStatus();
 
+    // Then set up interval for periodic checks (every 2 minutes)
+    const interval = setInterval(checkFriendRequestStatus, 120000);
+
     return () => clearInterval(interval);
-  }, [user, sentRequests]);
+  }, [user]); // Only depend on user, not on sentRequests
 
   // Initialize socket
   useEffect(() => {
@@ -164,9 +174,6 @@ export default function Chat() {
             });
           }
         } else if (message.from._id !== user._id) {
-          // Show notification for new message
-          toast.success(`New message from ${message.from.name}`);
-
           // Update latest chats
           fetchLatestChats();
         }
@@ -193,18 +200,6 @@ export default function Chat() {
       // Listen for friend requests
       socket.on("friendRequest", (data) => {
         console.log(data);
-        // Fetch user details to show their name in the toast
-        userAPI
-          .getUserById(data.userId)
-          .then((response) => {
-            const userName = response.data.name || "Someone";
-            toast.success(`New friend request from ${userName}! 👋`);
-          })
-          .catch((err) => {
-            toast.success("You have a new friend request!");
-            console.error("Error fetching user details:", err);
-          });
-
         fetchFriendRequests();
         updateNotificationCount();
       });
@@ -232,18 +227,6 @@ export default function Chat() {
           });
         }
 
-        // Fetch user details to show their name in the toast
-        userAPI
-          .getUserById(data.userId)
-          .then((response) => {
-            const userName = response.data.name || "Someone";
-            toast.success(`${userName} accepted your friend request! 🎉`);
-          })
-          .catch((err) => {
-            toast.success("Your friend request was accepted!");
-            console.error("Error fetching user details:", err);
-          });
-
         fetchFriends();
       });
 
@@ -269,11 +252,17 @@ export default function Chat() {
   const fetchLatestChats = async () => {
     try {
       const response = await messagesAPI.getLatestChats();
-      setLatestChats(response.data);
+      if (response && response.data) {
+        setLatestChats(response.data);
+      } else {
+        setLatestChats([]);
+        console.log("No chat data received or invalid format");
+      }
       setLoading(false);
     } catch (error) {
-      console.log(error.message);
+      console.error("Error fetching latest chats:", error.message);
       setError("Failed to fetch chats");
+      setLatestChats([]);
       setLoading(false);
     }
   };
@@ -316,61 +305,85 @@ export default function Chat() {
   };
 
   // Fetch all users - wrapped in useCallback to avoid dependency issues in useEffect
-  const fetchAllUsers = useCallback(async () => {
-    try {
-      setLoadingUsers(true);
-      console.log("Fetching all users...");
-      const response = await userAPI.getAllUsers();
-      console.log("All users API response:", response);
-
-      if (!response.data || !Array.isArray(response.data)) {
-        console.error(
-          "Invalid response format from getAllUsers API:",
-          response
+  const fetchAllUsers = useCallback(
+    async (forceRefresh = false) => {
+      // Debounce API calls to prevent hammering the server
+      if (loadingUsers) {
+        console.log(
+          "Skipping fetchAllUsers call as a request is already in progress"
         );
-        toast.error("Failed to load users. Invalid data format.");
         return;
       }
 
-      const filteredUsers = response.data.filter((u) => u._id !== user._id);
-      console.log("Filtered users (excluding current user):", filteredUsers);
-
-      // Load existing sent requests from localStorage
-      let currentSentRequests = sentRequests;
-      try {
-        const storedRequests = localStorage.getItem("sentFriendRequests");
-        if (storedRequests) {
-          currentSentRequests = JSON.parse(storedRequests);
-          setSentRequests(currentSentRequests);
-        }
-      } catch (error) {
-        console.error("Error reading from localStorage:", error);
+      // If forceRefresh is true, we'll proceed even if usersFetched is true
+      if (usersFetched && !forceRefresh) {
+        console.log("Users already fetched, skipping fetch");
+        return;
       }
 
-      // Mark users that have pending friend requests
-      const enhancedUsers = filteredUsers.map((u) => {
-        if (currentSentRequests.includes(u._id)) {
-          return { ...u, friendRequestStatus: "pending" };
+      try {
+        // Set loading state
+        setLoadingUsers(true);
+
+        // Add a slight delay to prevent rapid successive calls
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // API request with proper error handling
+        const response = await userAPI.getAllUsers();
+
+        if (!response || !response.data || !Array.isArray(response.data)) {
+          console.error("Invalid response from getAllUsers API");
+          return;
         }
-        return u;
-      });
 
-      console.log("Enhanced users with friend request status:", enhancedUsers);
-      setAllUsers(enhancedUsers);
-      console.log("allUsers state after update:", enhancedUsers.length);
+        // Filter out the current user
+        const filteredUsers =
+          user && user._id
+            ? response.data.filter((u) => u._id !== user._id)
+            : response.data;
 
-      // Force update of filteredUsers
-      const filtered = enhancedUsers.filter((user) =>
-        user.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      console.log("Filtered users after search:", filtered.length);
-    } catch (error) {
-      console.error("Failed to fetch all users:", error);
-      toast.error("Failed to load users. Please try again.");
-    } finally {
-      setLoadingUsers(false);
-    }
-  }, [user, sentRequests, searchQuery, setLoadingUsers]);
+        // Get the latest sent requests from localStorage
+        let currentSentRequests = [];
+        try {
+          const storedRequests = localStorage.getItem("sentFriendRequests");
+          if (storedRequests) {
+            currentSentRequests = JSON.parse(storedRequests);
+
+            // Avoid unnecessary state updates that can trigger re-renders
+            const currentSentRequestsStr = JSON.stringify(currentSentRequests);
+            const sentRequestsStr = JSON.stringify(sentRequests);
+
+            if (currentSentRequestsStr !== sentRequestsStr) {
+              setSentRequests(currentSentRequests);
+            }
+          }
+        } catch (error) {
+          console.error("Error reading from localStorage:", error);
+        }
+
+        // Mark users with pending friend requests
+        const enhancedUsers = filteredUsers.map((u) => {
+          if (currentSentRequests.includes(u._id)) {
+            return { ...u, friendRequestStatus: "pending" };
+          }
+          return u;
+        });
+
+        // Update allUsers state
+        setAllUsers(enhancedUsers);
+
+        // Set the usersFetched flag to prevent unnecessary refetches
+        setUsersFetched(true);
+      } catch (error) {
+        console.error("Failed to fetch all users:", error);
+      } finally {
+        // Always reset loading state
+        setLoadingUsers(false);
+      }
+      // Include usersFetched in dependency array to avoid the reference error
+    },
+    [user, loadingUsers, sentRequests, usersFetched]
+  );
 
   // Fetch friends
   const fetchFriends = async () => {
@@ -395,7 +408,7 @@ export default function Chat() {
   // Update notification count
   const updateNotificationCount = async () => {
     try {
-      const response = await userAPI.getNotificationCount();
+      const response = await userAPI.getNotificationsCount();
       setNotificationCount(response.data.count);
     } catch (error) {
       console.error("Failed to fetch notification count:", error);
@@ -481,11 +494,25 @@ export default function Chat() {
       const response = await userAPI.sendFriendRequest(userId);
       console.log("Friend request response:", response.data);
 
-      // Get user name for better notification
-      let userName = "User";
+      // Show a success toast notification with custom styling
+      toast.success("Friend request sent successfully", {
+        position: "top-right",
+        autoClose: 3000,
+        theme: "dark",
+        style: {
+          background: "black",
+          color: "white",
+        },
+        progressStyle: {
+          background: "white",
+        },
+        progressClassName: "!bg-white",
+        icon: "🎉",
+      });
+
+      // Get user data if needed
       try {
-        const userResponse = await userAPI.getUserById(userId);
-        userName = userResponse.data.name || "User";
+        await userAPI.getUserById(userId);
       } catch (error) {
         console.error("Error fetching user details:", error);
       }
@@ -504,9 +531,6 @@ export default function Chat() {
         console.error("Failed to save to localStorage:", storageError);
       }
 
-      // Show success toast notification
-      toast.success(`Friend request sent to ${userName}! 🚀`);
-
       // If in All Users tab, update UI immediately
       if (activeTab === "allUsers") {
         setAllUsers((prev) =>
@@ -517,16 +541,13 @@ export default function Chat() {
       }
     } catch (error) {
       console.error("Failed to send friend request:", error);
-      // More detailed error message to help debugging
+      // Log detailed error message to help debugging
       if (error.response) {
         console.error("Error response:", error.response.data);
-        toast.error(`Failed: ${error.response.data.msg || "Request failed"}`);
       } else if (error.request) {
         console.error("No response received:", error.request);
-        toast.error("No response from server. Check your connection.");
       } else {
         console.error("Error setting up request:", error.message);
-        toast.error("Failed to send friend request");
       }
     }
   };
@@ -534,14 +555,7 @@ export default function Chat() {
   // Accept friend request
   const acceptFriendRequest = async (userId) => {
     try {
-      // Find the user's name for the toast message
-      const requestUser = friendRequests.find((req) => req._id === userId);
-      const userName = requestUser ? requestUser.name : "User";
-
       await userAPI.acceptFriendRequest(userId);
-
-      // Show success toast with user name
-      toast.success(`You are now friends with ${userName}! 👍`);
 
       // Update UI
       fetchFriendRequests();
@@ -554,7 +568,6 @@ export default function Chat() {
       }
     } catch (error) {
       console.error("Failed to accept friend request:", error);
-      toast.error("Failed to accept friend request");
     }
   };
 
@@ -562,12 +575,10 @@ export default function Chat() {
   const rejectFriendRequest = async (userId) => {
     try {
       await userAPI.rejectFriendRequest(userId);
-      toast.success("Friend request rejected");
       fetchFriendRequests();
       updateNotificationCount();
     } catch (error) {
       console.error("Failed to reject friend request:", error);
-      toast.error("Failed to reject friend request");
     }
   };
 
@@ -603,27 +614,78 @@ export default function Chat() {
   // Load initial data
   useEffect(() => {
     if (user) {
-      fetchLatestChats();
-      updateNotificationCount();
+      setLoading(true);
+      setError("");
+
+      // Wrap in try/catch to ensure loading state is reset even if something fails
+      try {
+        fetchLatestChats();
+        updateNotificationCount();
+      } catch (error) {
+        console.error("Error in initial data load:", error);
+        setLoading(false);
+      }
     }
   }, [user]);
 
   // Fetch users when activeTab changes to "allUsers"
   useEffect(() => {
-    if (activeTab === "allUsers" && user) {
-      console.log("All Users tab active, fetching users...");
-      fetchAllUsers();
-    }
-  }, [activeTab, user, fetchAllUsers]);
+    // Only fetch users when:
+    // 1. Active tab is "allUsers"
+    // 2. We have a valid user
+    // 3. Users haven't been fetched yet
+    if (activeTab === "allUsers" && user && user._id && !usersFetched) {
+      // Use a timeout to prevent multiple concurrent calls
+      const timer = setTimeout(() => {
+        fetchAllUsers(false); // false means don't force refresh
+      }, 100);
 
-  // Filter users based on search query
-  const filteredUsers = allUsers.filter((user) =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase())
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, user, fetchAllUsers, usersFetched]);
+
+  // Separate useEffect for resetting the fetched flag when switching tabs
+  useEffect(() => {
+    if (activeTab !== "allUsers") {
+      setUsersFetched(false);
+    }
+  }, [activeTab]); // Filter users based on search query
+  const filteredUsers = allUsers.filter((u) =>
+    u.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Check if user is authenticated before rendering anything
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-600">
+        Please log in to view your chats
+      </div>
+    );
+  }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen text-gray-600">
+        <svg
+          className="animate-spin h-8 w-8 text-black mr-3"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
         Loading chats...
       </div>
     );
@@ -632,7 +694,20 @@ export default function Chat() {
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen text-red-600">
-        {error}
+        <div className="text-center">
+          <div className="text-xl mb-2">Error</div>
+          <div>{error}</div>
+          <button
+            className="mt-4 px-4 py-2 bg-black text-white rounded-md"
+            onClick={() => {
+              setError("");
+              setLoading(true);
+              fetchLatestChats();
+            }}
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -707,7 +782,7 @@ export default function Chat() {
             }`}
             onClick={() => {
               setActiveTab("allUsers");
-              fetchAllUsers();
+              // Don't fetch here, the useEffect will handle it
             }}
           >
             All Users
@@ -744,7 +819,6 @@ export default function Chat() {
             )}
           </button>
         </div>
-
         {(notificationCount > 0 ||
           latestChats.reduce(
             (count, chat) => count + (chat.unreadCount || 0),
@@ -783,30 +857,58 @@ export default function Chat() {
             )}
           </div>
         )}
-
-        {/* Search bar - visible only in All Users tab */}
+        {/* Search bar with refresh button - visible only in All Users tab */}
         {activeTab === "allUsers" && (
           <div className="p-3 border-b border-gray-200">
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md"
-            />
+            <div className="flex items-center">
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => {
+                  // Update search query without triggering API calls
+                  setSearchQuery(e.target.value);
+                }}
+                className="flex-grow w-[90%] p-2 mr-[10px] border border-gray-300 rounded"
+              />
+              <button
+                className="w-[10%] p-2 bg-gray-100 hover:bg-gray-200 transition-colors border border-gray-300 border rounded"
+                onClick={() => {
+                  setTimeout(() => {
+                    fetchAllUsers(true);
+                  }, 300);
+                }}
+                title="Refresh users list"
+                disabled={loadingUsers}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mx-auto"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
-        )}
-
+        )}{" "}
         {/* Display content based on active tab */}
         <div className="flex-1 overflow-y-auto">
           {/* Chats Tab */}
           {activeTab === "chats" && (
             <div className="p-3">
               <div className="mb-4">
-                <h3 className="text-lg font-semibold">Your Conversations</h3>
+                {/* <h3 className="text-lg font-semibold">Your Conversations</h3>
                 <p className="text-sm text-gray-600">
                   Chat with friends and language partners
-                </p>
+                </p> */}
               </div>
 
               {latestChats.length === 0 ? (
@@ -829,72 +931,77 @@ export default function Chat() {
                       <div className="text-sm font-semibold mb-2 text-gray-500">
                         Unread Messages
                       </div>
-                      {latestChats
-                        .filter((chat) => chat.unreadCount > 0)
-                        .map((chat) => {
-                          const chatUser = chat.otherUser;
-                          const isOnline = isUserOnline(chatUser._id);
+                      {Array.isArray(latestChats) &&
+                        latestChats
+                          .filter((chat) => chat && chat.unreadCount > 0)
+                          .map((chat) => {
+                            // Check if chat and otherUser exist to prevent render errors
+                            if (!chat || !chat.otherUser) return null;
+                            const chatUser = chat.otherUser;
+                            const isOnline = isUserOnline(chatUser?._id);
 
-                          return (
-                            <div
-                              key={chatUser._id}
-                              className={`p-3 mb-1 rounded cursor-pointer flex items-center ${
-                                selectedUser?._id === chatUser._id
-                                  ? "bg-gray-200"
-                                  : "hover:bg-gray-100"
-                              }`}
-                              onClick={() => handleSelectUser(chatUser)}
-                            >
-                              <div className="relative mr-3">
-                                {chatUser.avatar ? (
-                                  <img
-                                    src={chatUser.avatar}
-                                    alt={chatUser.name}
-                                    className="w-10 h-10 rounded-full"
-                                  />
-                                ) : (
-                                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                    {chatUser.name?.charAt(0).toUpperCase()}
-                                  </div>
-                                )}
-                                <span
-                                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-                                    isOnline ? "bg-green-500" : "bg-gray-400"
-                                  }`}
-                                ></span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-semibold">
-                                  {chatUser.name}
-                                </div>
-                                <div className="text-sm text-gray-600 truncate">
-                                  {chat.lastMessage ? (
-                                    <>
-                                      {chat.lastMessage.from === user._id && (
-                                        <span>You: </span>
-                                      )}
-                                      {chat.lastMessage.text}
-                                    </>
+                            return (
+                              <div
+                                key={chatUser._id}
+                                className={`p-3 mb-1 rounded cursor-pointer flex items-center ${
+                                  selectedUser?._id === chatUser._id
+                                    ? "bg-gray-200"
+                                    : "hover:bg-gray-100"
+                                }`}
+                                onClick={() => handleSelectUser(chatUser)}
+                              >
+                                <div className="relative mr-3">
+                                  {chatUser.avatar ? (
+                                    <img
+                                      src={chatUser.avatar}
+                                      alt={chatUser.name}
+                                      className="w-10 h-10 rounded-full"
+                                    />
                                   ) : (
-                                    <span className="italic">
-                                      No messages yet
-                                    </span>
+                                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                      {chatUser.name?.charAt(0).toUpperCase()}
+                                    </div>
                                   )}
+                                  <span
+                                    className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                                      isOnline ? "bg-green-500" : "bg-gray-400"
+                                    }`}
+                                  ></span>
                                 </div>
-                              </div>
-                              <div className="flex flex-col items-end ml-2">
-                                {chat.lastMessage && (
-                                  <div className="text-xs text-gray-500">
-                                    {formatMessageTime(chat.lastMessage.sentAt)}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold">
+                                    {chatUser.name}
                                   </div>
-                                )}
-                                <div className="bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mt-1">
-                                  {chat.unreadCount}
+                                  <div className="text-sm text-gray-600 truncate">
+                                    {chat.lastMessage ? (
+                                      <>
+                                        {chat.lastMessage.from === user._id && (
+                                          <span>You: </span>
+                                        )}
+                                        {chat.lastMessage.text}
+                                      </>
+                                    ) : (
+                                      <span className="italic">
+                                        No messages yet
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end ml-2">
+                                  {chat.lastMessage && (
+                                    <div className="text-xs text-gray-500">
+                                      {formatMessageTime(
+                                        chat.lastMessage.sentAt
+                                      )}
+                                    </div>
+                                  )}
+                                  <div className="bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mt-1">
+                                    {chat.unreadCount}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
                     </div>
                   )}
 
@@ -902,68 +1009,75 @@ export default function Chat() {
                     <div className="text-sm font-semibold mb-2 text-gray-500">
                       All Conversations
                     </div>
-                    {latestChats.map((chat) => {
-                      const chatUser = chat.otherUser;
-                      const isOnline = isUserOnline(chatUser._id);
+                    {Array.isArray(latestChats) &&
+                      latestChats.map((chat) => {
+                        // Check if chat and otherUser exist to prevent render errors
+                        if (!chat || !chat.otherUser) return null;
+                        const chatUser = chat.otherUser;
+                        const isOnline = isUserOnline(chatUser?._id);
 
-                      return (
-                        <div
-                          key={chatUser._id}
-                          className={`p-3 mb-1 rounded cursor-pointer flex items-center ${
-                            selectedUser?._id === chatUser._id
-                              ? "bg-gray-200"
-                              : "hover:bg-gray-100"
-                          }`}
-                          onClick={() => handleSelectUser(chatUser)}
-                        >
-                          <div className="relative mr-3">
-                            {chatUser.avatar ? (
-                              <img
-                                src={chatUser.avatar}
-                                alt={chatUser.name}
-                                className="w-10 h-10 rounded-full"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                {chatUser.name?.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                            <span
-                              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-                                isOnline ? "bg-green-500" : "bg-gray-400"
-                              }`}
-                            ></span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold">{chatUser.name}</div>
-                            <div className="text-sm text-gray-600 truncate">
-                              {chat.lastMessage ? (
-                                <>
-                                  {chat.lastMessage.from === user._id && (
-                                    <span>You: </span>
-                                  )}
-                                  {chat.lastMessage.text}
-                                </>
+                        return (
+                          <div
+                            key={chatUser._id}
+                            className={`p-3 mb-1 rounded cursor-pointer flex items-center ${
+                              selectedUser?._id === chatUser._id
+                                ? "bg-gray-200"
+                                : "hover:bg-gray-100"
+                            }`}
+                            onClick={() => handleSelectUser(chatUser)}
+                          >
+                            <div className="relative mr-3">
+                              {chatUser.avatar ? (
+                                <img
+                                  src={chatUser.avatar}
+                                  alt={chatUser.name}
+                                  className="w-10 h-10 rounded-full"
+                                />
                               ) : (
-                                <span className="italic">No messages yet</span>
+                                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                  {chatUser.name?.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <span
+                                className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                                  isOnline ? "bg-green-500" : "bg-gray-400"
+                                }`}
+                              ></span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold">
+                                {chatUser.name}
+                              </div>
+                              <div className="text-sm text-gray-600 truncate">
+                                {chat.lastMessage ? (
+                                  <>
+                                    {chat.lastMessage.from === user._id && (
+                                      <span>You: </span>
+                                    )}
+                                    {chat.lastMessage.text}
+                                  </>
+                                ) : (
+                                  <span className="italic">
+                                    No messages yet
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end ml-2">
+                              {chat.lastMessage && (
+                                <div className="text-xs text-gray-500">
+                                  {formatMessageTime(chat.lastMessage.sentAt)}
+                                </div>
+                              )}
+                              {chat.unreadCount > 0 && (
+                                <div className="bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mt-1">
+                                  {chat.unreadCount}
+                                </div>
                               )}
                             </div>
                           </div>
-                          <div className="flex flex-col items-end ml-2">
-                            {chat.lastMessage && (
-                              <div className="text-xs text-gray-500">
-                                {formatMessageTime(chat.lastMessage.sentAt)}
-                              </div>
-                            )}
-                            {chat.unreadCount > 0 && (
-                              <div className="bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs mt-1">
-                                {chat.unreadCount}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                 </>
               )}
@@ -973,28 +1087,8 @@ export default function Chat() {
           {/* All Users Tab */}
           {activeTab === "allUsers" && (
             <div className="p-3">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">All Users</h3>
-                <button
-                  className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
-                  onClick={fetchAllUsers}
-                  title="Refresh users list"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                </button>
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold"></h3>
               </div>
               {loadingUsers ? (
                 <div className="flex justify-center items-center py-8">
@@ -1122,7 +1216,7 @@ export default function Chat() {
           {/* Friends Tab */}
           {activeTab === "friends" && (
             <div className="p-3">
-              <h3 className="text-lg font-semibold mb-4">Your Friends</h3>
+              {/* <h3 className="text-lg font-semibold mb-4">Your Friends</h3> */}
               {friends.length === 0 ? (
                 <div className="text-center py-10">
                   <p className="mb-2">No friends yet</p>
@@ -1186,7 +1280,7 @@ export default function Chat() {
           {/* Friend Requests Tab */}
           {activeTab === "requests" && (
             <div className="p-3">
-              <h3 className="text-lg font-semibold mb-4">Friend Requests</h3>
+              {/* <h3 className="text-lg font-semibold mb-4">Friend Requests</h3> */}
               {friendRequests.length === 0 ? (
                 <p className="text-center py-4 text-gray-500">
                   No pending friend requests

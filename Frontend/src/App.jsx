@@ -102,7 +102,14 @@ function App() {
         <ToastContainer
           position="top-right"
           autoClose={3000}
-          theme="colored" /* or "light" / "dark" depending on your app theme */
+          theme="dark"
+          toastStyle={{
+            backgroundColor: "black",
+            color: "white",
+          }}
+          progressStyle={{
+            backgroundColor: "white",
+          }}
         />
       </main>
     </Router>

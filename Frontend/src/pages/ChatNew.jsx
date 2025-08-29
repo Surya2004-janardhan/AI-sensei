@@ -116,9 +116,7 @@ export default function Chat() {
 
   // Initialize socket
   useEffect(() => {
-    const socketInstance = io(
-      import.meta.env.VITE_API_URL || "http://localhost:3000"
-    );
+    const socketInstance = io("https://ai-sensei-lej2.onrender.com");
     setSocket(socketInstance);
 
     // Log connection status

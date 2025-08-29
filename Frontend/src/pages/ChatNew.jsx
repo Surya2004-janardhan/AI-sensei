@@ -1,9 +1,15 @@
-import React, { useEffect, useState, useRef, useContext } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useContext,
+  useCallback,
+} from "react";
 import * as messagesAPI from "../api/messages";
 import * as userAPI from "../api/user";
 import { AuthContext } from "../contexts/AuthContext";
 import { io } from "socket.io-client";
-import { toast } from "react-hot-toast";
+import { toast } from "react-toastify";
 // Using Tailwind CSS instead of custom CSS
 
 export default function Chat() {
@@ -29,9 +35,74 @@ export default function Chat() {
   const [allUsers, setAllUsers] = useState([]);
   const [friends, setFriends] = useState([]);
   const [friendRequests, setFriendRequests] = useState([]);
+  const [sentRequests, setSentRequests] = useState([]); // Track users to whom friend requests have been sent
   const [activeTab, setActiveTab] = useState("chats"); // chats, allUsers, friends, requests
   const [notificationCount, setNotificationCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loadingUsers, setLoadingUsers] = useState(false); // Track loading state for users
+
+  // Load sent friend requests from localStorage and set up periodic checks
+  useEffect(() => {
+    // Load from localStorage initially
+    try {
+      const storedRequests = localStorage.getItem("sentFriendRequests");
+      if (storedRequests) {
+        setSentRequests(JSON.parse(storedRequests));
+      }
+    } catch (error) {
+      console.error(
+        "Failed to load sent friend requests from localStorage:",
+        error
+      );
+    }
+
+    // Function to verify friend request status
+    const checkFriendRequestStatus = async () => {
+      if (!user || sentRequests.length === 0) return;
+
+      try {
+        // Check if any sent requests have been accepted by fetching friends list
+        const friendsResponse = await userAPI.getFriends();
+        const currentFriends = friendsResponse.data;
+
+        // For each friend, if they're in our sentRequests list, they've accepted
+        const acceptedRequests = currentFriends
+          .filter((friend) => sentRequests.includes(friend._id))
+          .map((friend) => friend._id);
+
+        // Remove accepted requests from sentRequests
+        if (acceptedRequests.length > 0) {
+          const updatedRequests = sentRequests.filter(
+            (id) => !acceptedRequests.includes(id)
+          );
+
+          // Update state and localStorage
+          setSentRequests(updatedRequests);
+          localStorage.setItem(
+            "sentFriendRequests",
+            JSON.stringify(updatedRequests)
+          );
+
+          // Update UI
+          toast.success(
+            `${acceptedRequests.length > 1 ? "Multiple" : "A"} friend request${
+              acceptedRequests.length > 1 ? "s were" : " was"
+            } accepted!`
+          );
+        }
+      } catch (error) {
+        console.error("Error checking friend request status:", error);
+      }
+    };
+
+    // Check periodically (every 30 seconds)
+    const interval = setInterval(checkFriendRequestStatus, 30000);
+
+    // Check once on component mount
+    checkFriendRequestStatus();
+
+    return () => clearInterval(interval);
+  }, [user, sentRequests]);
 
   // Initialize socket
   useEffect(() => {
@@ -122,7 +193,18 @@ export default function Chat() {
       // Listen for friend requests
       socket.on("friendRequest", (data) => {
         console.log(data);
-        toast.success("You have a new friend request!");
+        // Fetch user details to show their name in the toast
+        userAPI
+          .getUserById(data.userId)
+          .then((response) => {
+            const userName = response.data.name || "Someone";
+            toast.success(`New friend request from ${userName}! 👋`);
+          })
+          .catch((err) => {
+            toast.success("You have a new friend request!");
+            console.error("Error fetching user details:", err);
+          });
+
         fetchFriendRequests();
         updateNotificationCount();
       });
@@ -130,7 +212,38 @@ export default function Chat() {
       // Listen for accepted friend requests
       socket.on("friendRequestAccepted", (data) => {
         console.log(data);
-        toast.success("Your friend request was accepted!");
+
+        // Remove from sentRequests since it's now accepted
+        if (data.userId) {
+          setSentRequests((prev) => {
+            const updated = prev.filter((id) => id !== data.userId);
+
+            // Update localStorage
+            try {
+              localStorage.setItem(
+                "sentFriendRequests",
+                JSON.stringify(updated)
+              );
+            } catch (storageError) {
+              console.error("Failed to update localStorage:", storageError);
+            }
+
+            return updated;
+          });
+        }
+
+        // Fetch user details to show their name in the toast
+        userAPI
+          .getUserById(data.userId)
+          .then((response) => {
+            const userName = response.data.name || "Someone";
+            toast.success(`${userName} accepted your friend request! 🎉`);
+          })
+          .catch((err) => {
+            toast.success("Your friend request was accepted!");
+            console.error("Error fetching user details:", err);
+          });
+
         fetchFriends();
       });
 
@@ -202,15 +315,62 @@ export default function Chat() {
     }
   };
 
-  // Fetch all users
-  const fetchAllUsers = async () => {
+  // Fetch all users - wrapped in useCallback to avoid dependency issues in useEffect
+  const fetchAllUsers = useCallback(async () => {
     try {
+      setLoadingUsers(true);
+      console.log("Fetching all users...");
       const response = await userAPI.getAllUsers();
-      setAllUsers(response.data.filter((u) => u._id !== user._id));
+      console.log("All users API response:", response);
+
+      if (!response.data || !Array.isArray(response.data)) {
+        console.error(
+          "Invalid response format from getAllUsers API:",
+          response
+        );
+        toast.error("Failed to load users. Invalid data format.");
+        return;
+      }
+
+      const filteredUsers = response.data.filter((u) => u._id !== user._id);
+      console.log("Filtered users (excluding current user):", filteredUsers);
+
+      // Load existing sent requests from localStorage
+      let currentSentRequests = sentRequests;
+      try {
+        const storedRequests = localStorage.getItem("sentFriendRequests");
+        if (storedRequests) {
+          currentSentRequests = JSON.parse(storedRequests);
+          setSentRequests(currentSentRequests);
+        }
+      } catch (error) {
+        console.error("Error reading from localStorage:", error);
+      }
+
+      // Mark users that have pending friend requests
+      const enhancedUsers = filteredUsers.map((u) => {
+        if (currentSentRequests.includes(u._id)) {
+          return { ...u, friendRequestStatus: "pending" };
+        }
+        return u;
+      });
+
+      console.log("Enhanced users with friend request status:", enhancedUsers);
+      setAllUsers(enhancedUsers);
+      console.log("allUsers state after update:", enhancedUsers.length);
+
+      // Force update of filteredUsers
+      const filtered = enhancedUsers.filter((user) =>
+        user.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      console.log("Filtered users after search:", filtered.length);
     } catch (error) {
       console.error("Failed to fetch all users:", error);
+      toast.error("Failed to load users. Please try again.");
+    } finally {
+      setLoadingUsers(false);
     }
-  };
+  }, [user, sentRequests, searchQuery, setLoadingUsers]);
 
   // Fetch friends
   const fetchFriends = async () => {
@@ -317,22 +477,81 @@ export default function Chat() {
   // Send friend request
   const sendFriendRequest = async (userId) => {
     try {
-      await userAPI.sendFriendRequest(userId);
-      toast.success("Friend request sent!");
+      console.log("Sending friend request to user ID:", userId);
+      const response = await userAPI.sendFriendRequest(userId);
+      console.log("Friend request response:", response.data);
+
+      // Get user name for better notification
+      let userName = "User";
+      try {
+        const userResponse = await userAPI.getUserById(userId);
+        userName = userResponse.data.name || "User";
+      } catch (error) {
+        console.error("Error fetching user details:", error);
+      }
+
+      // Update sentRequests state to track that we've sent a request to this user
+      const updatedSentRequests = [...sentRequests, userId];
+      setSentRequests(updatedSentRequests);
+
+      // Save to localStorage for persistence
+      try {
+        localStorage.setItem(
+          "sentFriendRequests",
+          JSON.stringify(updatedSentRequests)
+        );
+      } catch (storageError) {
+        console.error("Failed to save to localStorage:", storageError);
+      }
+
+      // Show success toast notification
+      toast.success(`Friend request sent to ${userName}! 🚀`);
+
+      // If in All Users tab, update UI immediately
+      if (activeTab === "allUsers") {
+        setAllUsers((prev) =>
+          prev.map((u) =>
+            u._id === userId ? { ...u, friendRequestStatus: "pending" } : u
+          )
+        );
+      }
     } catch (error) {
       console.error("Failed to send friend request:", error);
-      toast.error("Failed to send friend request");
+      // More detailed error message to help debugging
+      if (error.response) {
+        console.error("Error response:", error.response.data);
+        toast.error(`Failed: ${error.response.data.msg || "Request failed"}`);
+      } else if (error.request) {
+        console.error("No response received:", error.request);
+        toast.error("No response from server. Check your connection.");
+      } else {
+        console.error("Error setting up request:", error.message);
+        toast.error("Failed to send friend request");
+      }
     }
   };
 
   // Accept friend request
   const acceptFriendRequest = async (userId) => {
     try {
+      // Find the user's name for the toast message
+      const requestUser = friendRequests.find((req) => req._id === userId);
+      const userName = requestUser ? requestUser.name : "User";
+
       await userAPI.acceptFriendRequest(userId);
-      toast.success("Friend request accepted!");
+
+      // Show success toast with user name
+      toast.success(`You are now friends with ${userName}! 👍`);
+
+      // Update UI
       fetchFriendRequests();
       fetchFriends();
       updateNotificationCount();
+
+      // If we're in the requests tab, but now have no requests left, go to friends tab
+      if (activeTab === "requests" && friendRequests.length === 1) {
+        setActiveTab("friends");
+      }
     } catch (error) {
       console.error("Failed to accept friend request:", error);
       toast.error("Failed to accept friend request");
@@ -388,6 +607,14 @@ export default function Chat() {
       updateNotificationCount();
     }
   }, [user]);
+
+  // Fetch users when activeTab changes to "allUsers"
+  useEffect(() => {
+    if (activeTab === "allUsers" && user) {
+      console.log("All Users tab active, fetching users...");
+      fetchAllUsers();
+    }
+  }, [activeTab, user, fetchAllUsers]);
 
   // Filter users based on search query
   const filteredUsers = allUsers.filter((user) =>
@@ -464,7 +691,9 @@ export default function Chat() {
         <div className="border-b border-gray-200 flex flex-wrap md:flex-nowrap">
           <button
             className={`py-3 px-2 md:px-4 flex-1 text-center text-sm md:text-base ${
-              activeTab === "chats" ? "bg-gray-100 text-black" : "text-gray-600"
+              activeTab === "chats"
+                ? "bg-gray-100 text-black font-bold"
+                : "text-gray-600"
             }`}
             onClick={() => setActiveTab("chats")}
           >
@@ -473,7 +702,7 @@ export default function Chat() {
           <button
             className={`py-3 px-2 md:px-4 flex-1 text-center text-sm md:text-base ${
               activeTab === "allUsers"
-                ? "bg-gray-100 text-black"
+                ? "bg-gray-100 font-bold text-black "
                 : "text-gray-600"
             }`}
             onClick={() => {
@@ -486,7 +715,7 @@ export default function Chat() {
           <button
             className={`py-3 px-2 md:px-4 flex-1 text-center text-sm md:text-base ${
               activeTab === "friends"
-                ? "bg-gray-100 text-black"
+                ? "bg-gray-100 text-black font-bold"
                 : "text-gray-600"
             }`}
             onClick={() => {
@@ -499,7 +728,7 @@ export default function Chat() {
           <button
             className={`py-3 px-2 md:px-4 flex-1 text-center relative text-sm md:text-base ${
               activeTab === "requests"
-                ? "bg-gray-100 text-black"
+                ? "bg-gray-100 font-bold text-black"
                 : "text-gray-600"
             }`}
             onClick={() => {
@@ -590,7 +819,7 @@ export default function Chat() {
                     className="px-4 py-2 bg-black text-white rounded-md"
                     onClick={() => setActiveTab("allUsers")}
                   >
-                    Find Users
+                    Find Friends
                   </button>
                 </div>
               ) : (
@@ -744,14 +973,62 @@ export default function Chat() {
           {/* All Users Tab */}
           {activeTab === "allUsers" && (
             <div className="p-3">
-              <h3 className="text-lg font-semibold mb-4">All Users</h3>
-              {filteredUsers.length === 0 ? (
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">All Users</h3>
+                <button
+                  className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+                  onClick={fetchAllUsers}
+                  title="Refresh users list"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                </button>
+              </div>
+              {loadingUsers ? (
+                <div className="flex justify-center items-center py-8">
+                  <svg
+                    className="animate-spin h-8 w-8 text-black"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span className="ml-2 text-gray-600">Loading users...</span>
+                </div>
+              ) : filteredUsers.length === 0 ? (
                 <p className="text-center py-4 text-gray-500">No users found</p>
               ) : (
                 filteredUsers.map((u) => {
                   const isOnline = isUserOnline(u._id);
                   const isFriend = friends.some((f) => f._id === u._id);
-                  const requestSent = u.friendRequestStatus === "pending";
+                  const requestSent =
+                    u.friendRequestStatus === "pending" ||
+                    sentRequests.includes(u._id);
                   return (
                     <div
                       key={u._id}
@@ -792,14 +1069,45 @@ export default function Chat() {
                             Message
                           </button>
                         ) : requestSent ? (
-                          <span className="text-sm text-gray-500">
+                          <span className="px-3 py-1 bg-gray-200 text-gray-600 text-sm rounded-md flex items-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4 mr-1"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
                             Request Sent
                           </span>
                         ) : (
                           <button
-                            className="px-3 py-1 bg-black text-white text-sm rounded-md"
-                            onClick={() => sendFriendRequest(u._id)}
+                            className="px-3 py-1 bg-black text-white text-sm rounded-md flex items-center"
+                            onClick={() => {
+                              console.log("Adding friend:", u._id);
+                              sendFriendRequest(u._id);
+                            }}
                           >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4 mr-1"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                              />
+                            </svg>
                             Add Friend
                           </button>
                         )}
@@ -825,7 +1133,7 @@ export default function Chat() {
                     className="px-4 py-2 bg-black text-white rounded-md"
                     onClick={() => setActiveTab("allUsers")}
                   >
-                    Find Users
+                    Find Friends
                   </button>
                 </div>
               ) : (
@@ -993,14 +1301,52 @@ export default function Chat() {
               </div>
 
               {/* Add Friend Button */}
-              {!friends.some((friend) => friend._id === selectedUser._id) && (
-                <button
-                  className="px-3 py-1 bg-black text-white text-sm rounded-md"
-                  onClick={() => sendFriendRequest(selectedUser._id)}
-                >
-                  Add Friend
-                </button>
-              )}
+              {(() => {
+                // Debug info
+                console.log("Selected user:", selectedUser);
+                console.log("Friends:", friends);
+                console.log("Sent Requests:", sentRequests);
+                console.log(
+                  "Is friend?",
+                  friends.some((friend) => friend._id === selectedUser._id)
+                );
+                console.log(
+                  "Request sent?",
+                  sentRequests.includes(selectedUser._id)
+                );
+
+                // Determine button state
+                const isFriend = friends.some(
+                  (friend) => friend._id === selectedUser._id
+                );
+                const requestSent = sentRequests.includes(selectedUser._id);
+
+                if (!isFriend) {
+                  if (requestSent) {
+                    return (
+                      <span className="px-3 py-1 bg-gray-200 text-gray-600 text-sm rounded-md">
+                        Request Sent
+                      </span>
+                    );
+                  } else {
+                    return (
+                      <button
+                        className="px-3 py-1 bg-black text-white text-sm rounded-md"
+                        onClick={() => {
+                          console.log(
+                            "Add Friend clicked for:",
+                            selectedUser._id
+                          );
+                          sendFriendRequest(selectedUser._id);
+                        }}
+                      >
+                        Add Friend
+                      </button>
+                    );
+                  }
+                }
+                return null;
+              })()}
             </div>
 
             {/* Messages */}

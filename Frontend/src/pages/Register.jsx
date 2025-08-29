@@ -34,7 +34,7 @@ export default function Register() {
         return;
       }
     } catch {
-      toast.success("Registration successful!", {
+      toast.success("Registration Failed!", {
         position: "top-right",
         autoClose: 2000,
         style: {

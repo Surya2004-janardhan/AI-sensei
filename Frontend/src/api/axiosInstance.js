@@ -1,7 +1,7 @@
 import axios from "axios";
-// import dotenv from "dotenv"
+
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:5000/api", // your backend base URL
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api", // your backend base URL
 });
 
 axiosInstance.interceptors.request.use((config) => {

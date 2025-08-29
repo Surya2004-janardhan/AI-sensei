@@ -39,10 +39,18 @@ exports.getChatWithUser = async (req, res) => {
       ],
     })
       .sort({ sentAt: 1 })
+      .populate("from to", "name avatar _id")
       .exec();
+
+    // Mark messages as read
+    await Message.updateMany(
+      { from: otherId, to: req.user.id, read: false },
+      { $set: { read: true } }
+    );
 
     res.json(messages);
   } catch (err) {
+    console.error("Error getting chat:", err);
     res.status(500).json({ error: "Failed to fetch messages" });
   }
 };
@@ -59,9 +67,22 @@ exports.sendMessage = async (req, res) => {
       to: req.params.userId,
       text: text.trim(),
     });
-    // Optionally emit socket event here
-    res.json(message);
+
+    // Get the populated message for better client-side rendering
+    const populatedMessage = await Message.findById(message._id)
+      .populate("from to", "name avatar _id")
+      .lean();
+
+    // Emit socket event using the io instance
+    const io = req.app.get("io");
+    if (io) {
+      io.to(req.user.id).emit("receiveMessage", populatedMessage);
+      io.to(req.params.userId).emit("receiveMessage", populatedMessage);
+    }
+
+    res.json(populatedMessage);
   } catch (err) {
+    console.error("Message sending error:", err);
     res.status(500).json({ error: "Failed to send message" });
   }
 };

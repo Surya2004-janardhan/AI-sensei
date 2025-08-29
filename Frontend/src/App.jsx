@@ -16,9 +16,9 @@ import Roadmaps from "./pages/Roadmaps.jsx";
 import Quiz from "./pages/Quiz.jsx";
 import AITeacher from "./pages/AITeacher.jsx";
 import DoubtSolver from "./pages/DoubtSolver.jsx";
-import Chat from "./pages/Chat.jsx";
+import Chat from "./pages/ChatNew.jsx";
 import Navbar from "./components/Navbar.jsx";
-import { useAuth } from "./contexts/AuthContext.jsx";
+import { useAuth } from "./contexts/AuthContext";
 
 function App() {
   const { user, loading } = useAuth();

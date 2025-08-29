@@ -1,5 +1,5 @@
 // const { callAIGPT } = require("../services/aiService");
-import Groq from "groq-sdk";
+const Groq = require("groq-sdk");
 // console.log(process.env.GROQ_API_KEY);
 // const apiKey = process.env.GROQ_API_KEY?.replace(/(\r\n|\n|\r)/gm, "").trim();
 // console.log('apiKey: ', apiKey);
@@ -8,10 +8,10 @@ import Groq from "groq-sdk";
 // }else{
 //   console.log("key is there")
 // }
-import { ChatMessage } from "../models/Chat.js";
-import fs from "fs";
-import path from "path";
-import { pipeline } from "@xenova/transformers";
+const { ChatMessage } = require("../models/Chat");
+const fs = require("fs");
+const path = require("path");
+const { pipeline } = require("@xenova/transformers");
 
 // Load grammar database
 function getVectorDB() {
@@ -148,7 +148,7 @@ async function embedQuery(query) {
 //   }
 // };
 
-export const aiTeacher = async (req, res) => {
+exports.aiTeacher = async (req, res) => {
   try {
     // console.log("inside of aiTeacher");
     const { question, userId } = req.body;
@@ -220,7 +220,7 @@ export const aiTeacher = async (req, res) => {
   }
 };
 
-export const grammarTeacher = async (req, res) => {
+exports.grammarTeacher = async (req, res) => {
   try {
     const { question } = req.body;
 
@@ -293,7 +293,7 @@ You are a bilingual Kanji tutor who helps learners understand any Kanji deeply u
 - Pull meaning, readings, and context from the given Kanji chunks.
 `;
 
-export const kanjiTeacher = async (req, res) => {
+exports.kanjiTeacher = async (req, res) => {
   try {
     const { question } = req.body;
     if (!question || !question.trim()) {

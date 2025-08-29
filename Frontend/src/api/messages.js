@@ -1,11 +1,11 @@
 import axiosInstance from "./axiosInstance";
 
 // Get top 3 latest conversations
-export const getLatestMessages = () => axiosInstance.get("/messages/latest");
+export const getLatestChats = () => axiosInstance.get("/users/latest");
 
 // Get all messages between logged-in user and another user
-export const getChatWithUser = (userId) =>
-  axiosInstance.get(`/messages/${userId}`);
+export const getMessagesByUser = (userId) =>
+  axiosInstance.get(`/users/${userId}`);
 
 // Send a new message to a user
 export const sendMessage = (userId, text) =>

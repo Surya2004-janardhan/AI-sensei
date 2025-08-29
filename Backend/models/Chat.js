@@ -1,5 +1,5 @@
 // chatSchema.js
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const messageSchema = new mongoose.Schema({
   userId: String, // track individual users
@@ -9,4 +9,6 @@ const messageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-export const ChatMessage = mongoose.model("ChatMessage", messageSchema);
+const ChatMessage = mongoose.model("ChatMessage", messageSchema);
+
+module.exports = { ChatMessage };

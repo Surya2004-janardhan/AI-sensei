@@ -1585,7 +1585,8 @@ export default function Chat() {
       </div>
 
       {/* Define the typing animation with a keyframe class */}
-      <style jsx>{`
+      <style>
+        {`
         .typing-dots {
           display: inline-block;
           animation: typingAnimation 1.5s infinite;
@@ -1607,7 +1608,8 @@ export default function Chat() {
             content: "";
           }
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 }

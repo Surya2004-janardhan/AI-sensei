@@ -64,7 +64,7 @@ async function getTopKRelevantChunks(query, topK = 5) {
   }
 }
 const groq = new Groq({
-  apiKey: "",
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 const SYSTEM_PROMPT = `
@@ -331,3 +331,4 @@ exports.kanjiTeacher = async (req, res) => {
     res.status(500).json({ error: "Failed to process Kanji teacher answer." });
   }
 };
+

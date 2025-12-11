@@ -27,6 +27,7 @@ export default function Chat() {
   const [isTyping, setIsTyping] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   // User state
   const { user } = useContext(AuthContext);
@@ -116,7 +117,12 @@ export default function Chat() {
 
   // Initialize socket
   useEffect(() => {
-    const socketInstance = io("https://ai-sensei-lej2.onrender.com");
+    const socketInstance = io("https://ai-sensei-lej2.onrender.com", {
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+    });
     setSocket(socketInstance);
 
     // Log connection status
@@ -417,19 +423,26 @@ export default function Chat() {
   const handleSelectUser = (user) => {
     setSelectedUser(user);
     fetchChatMessages(user._id);
+    // Close sidebar on mobile after selecting a user
+    if (window.innerWidth < 1024) {
+      setShowSidebar(false);
+    }
   };
 
   // Send a message
   const sendMessage = async (e) => {
     e.preventDefault();
 
-    if (!chatInput.trim() || !selectedUser) return;
+    if (!chatInput.trim() || !selectedUser || sendingMessage) return;
+
+    const messageText = chatInput.trim();
+    setSendingMessage(true);
 
     try {
-      const response = await messagesAPI.sendMessage({
-        to: selectedUser._id,
-        text: chatInput,
-      });
+      const response = await messagesAPI.sendMessage(
+        selectedUser._id,
+        messageText
+      );
 
       // Add message to chat
       setChatMessages((prev) => [...prev, response.data]);
@@ -448,12 +461,20 @@ export default function Chat() {
       }
 
       // Clear typing indicator
-      socket.emit("typing", {
-        to: selectedUser._id,
-        isTyping: false,
-      });
+      if (socket) {
+        socket.emit("stopTyping", {
+          from: user._id,
+          to: selectedUser._id,
+        });
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
+      toast.error("Failed to send message. Please try again.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -461,7 +482,7 @@ export default function Chat() {
   const handleInputChange = (e) => {
     setChatInput(e.target.value);
 
-    if (selectedUser && socket) {
+    if (selectedUser && socket && user) {
       // Clear existing typing timeout
       if (typingTimeout) {
         clearTimeout(typingTimeout);
@@ -469,15 +490,15 @@ export default function Chat() {
 
       // Send typing indicator
       socket.emit("typing", {
+        from: user._id,
         to: selectedUser._id,
-        isTyping: true,
       });
 
       // Set timeout to stop typing indicator
       const timeout = setTimeout(() => {
-        socket.emit("typing", {
+        socket.emit("stopTyping", {
+          from: user._id,
           to: selectedUser._id,
-          isTyping: false,
         });
       }, 2000);
 
@@ -759,7 +780,7 @@ export default function Chat() {
       <div
         className={`${
           showSidebar ? "flex" : "hidden"
-        } lg:flex lg:w-1/3 w-full lg:relative absolute z-100 bg-white border-r border-gray-200 flex-col h-full overflow-hidden`}
+        } lg:flex lg:w-1/3 w-full lg:relative absolute z-50 bg-white border-r border-gray-200 flex-col h-full overflow-hidden`}
       >
         <div className="border-b border-gray-200 flex flex-wrap lg:flex-nowrap sticky top-0 z-20 bg-white shadow-sm w-full">
           <button
@@ -870,7 +891,7 @@ export default function Chat() {
                 className="flex-grow w-[80%] p-2 mr-[10px] border border-gray-300 rounded h-10"
               />
               <button
-                className="w-[20%] p-2 bg-gray-100 hover:bg-gray-200 transition-colors border border-gray-300 border rounded h-10 flex items-center justify-center"
+                className="w-[20%] p-2 bg-gray-100 hover:bg-gray-200 transition-colors border border-gray-300 rounded h-10 flex items-center justify-center"
                 onClick={() => {
                   setTimeout(() => {
                     fetchAllUsers(true);
@@ -931,12 +952,14 @@ export default function Chat() {
                       </div>
                       {Array.isArray(latestChats) &&
                         latestChats
-                          .filter((chat) => chat && chat.unreadCount > 0)
+                          .filter(
+                            (chat) =>
+                              chat && chat.unreadCount > 0 && chat.otherUser
+                          )
                           .map((chat) => {
-                            // Check if chat and otherUser exist to prevent render errors
-                            if (!chat || !chat.otherUser) return null;
                             const chatUser = chat.otherUser;
-                            const isOnline = isUserOnline(chatUser?._id);
+                            if (!chatUser || !chatUser._id) return null;
+                            const isOnline = isUserOnline(chatUser._id);
 
                             return (
                               <div
@@ -1011,10 +1034,10 @@ export default function Chat() {
                     </div>
                     {Array.isArray(latestChats) &&
                       latestChats.map((chat) => {
-                        // Check if chat and otherUser exist to prevent render errors
-                        if (!chat || !chat.otherUser) return null;
+                        if (!chat || !chat.otherUser || !chat.otherUser._id)
+                          return null;
                         const chatUser = chat.otherUser;
-                        const isOnline = isUserOnline(chatUser?._id);
+                        const isOnline = isUserOnline(chatUser._id);
 
                         return (
                           <div
@@ -1534,7 +1557,7 @@ export default function Chat() {
             </div>
 
             {/* Message Input - fixed at the bottom */}
-            <div className="border-t border-gray-200 p-3 flex-shrink-0 sticky bottom-15 bg-white z-201 shadow-sm">
+            <div className="border-t border-gray-200 p-3 flex-shrink-0 sticky bottom-0 bg-white z-20 shadow-sm">
               <form onSubmit={sendMessage} className="flex items-center">
                 <input
                   type="text"
@@ -1542,11 +1565,16 @@ export default function Chat() {
                   onChange={handleInputChange}
                   placeholder="Type a message..."
                   className="flex-1 p-2 border border-gray-300 rounded-l-md focus:outline-none focus:border-gray-500 h-10"
+                  disabled={!selectedUser}
                 />
                 <button
                   type="submit"
-                  className="bg-black text-white px-3 sm:px-4 py-2 rounded-r-md h-10 flex items-center"
-                  disabled={!chatInput.trim()}
+                  className={`${
+                    !chatInput.trim() || sendingMessage
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-black hover:bg-gray-800"
+                  } text-white px-3 sm:px-4 py-2 rounded-r-md h-10 flex items-center justify-center transition-colors`}
+                  disabled={!chatInput.trim() || !selectedUser || sendingMessage}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

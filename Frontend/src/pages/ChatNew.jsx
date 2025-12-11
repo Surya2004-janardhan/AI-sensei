@@ -128,6 +128,24 @@ export default function Chat() {
     // Log connection status
     socketInstance.on("connect", () => {
       console.log("Socket connected successfully");
+      // Refresh chats and messages when reconnecting after being offline
+      if (user) {
+        fetchLatestChats();
+        if (selectedUser) {
+          fetchChatMessages(selectedUser._id);
+        }
+      }
+    });
+
+    socketInstance.on("reconnect", (attemptNumber) => {
+      console.log("Socket reconnected after", attemptNumber, "attempts");
+      // Refresh data after reconnection
+      if (user) {
+        fetchLatestChats();
+        if (selectedUser) {
+          fetchChatMessages(selectedUser._id);
+        }
+      }
     });
 
     socketInstance.on("connect_error", (err) => {
@@ -137,6 +155,7 @@ export default function Chat() {
     return () => {
       if (socketInstance) socketInstance.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Connect socket when user is available
@@ -439,14 +458,9 @@ export default function Chat() {
     setSendingMessage(true);
 
     try {
-      const response = await messagesAPI.sendMessage(
-        selectedUser._id,
-        messageText
-      );
+      await messagesAPI.sendMessage(selectedUser._id, messageText);
 
-      // Add message to chat
-      setChatMessages((prev) => [...prev, response.data]);
-
+      // Message will be added via socket receiveMessage event
       // Reset input
       setChatInput("");
 
@@ -606,10 +620,17 @@ export default function Chat() {
     return onlineUsers.includes(userId);
   };
 
-  // Format message time
+  // Format message time (WhatsApp style - compact)
   const formatMessageTime = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return date
+      .toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .toLowerCase()
+      .replace(/\s/g, "");
   };
 
   // Format date for message groups
@@ -737,7 +758,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen max-h-screen overflow-hidden bg-white relative">
+    <div className="flex h-screen max-h-screen overflow-hidden bg-white">
       {/* Mobile Toggle Button - only visible on small screens */}
       <button
         className="lg:hidden fixed z-10 top-4 left-4 bg-black text-white p-2 rounded-md"
@@ -1385,7 +1406,7 @@ export default function Chat() {
         {selectedUser ? (
           <div className="flex flex-col h-full max-h-full overflow-hidden">
             {/* Chat Header */}
-            <div className="border-b border-gray-200 p-3 flex items-center justify-between sticky top-0 bg-white z-20 shadow-sm">
+            <div className="border-b border-gray-200 p-3 flex items-center justify-between sticky top-0 bg-white z-[60] shadow-sm">
               <div className="flex items-center">
                 {/* Mobile back button - only on small screens */}
                 <button
@@ -1523,8 +1544,10 @@ export default function Chat() {
                                   : "bg-gray-200 text-black rounded-bl-none"
                               }`}
                             >
-                              <div className="text-sm">{message.text}</div>
-                              <div className="flex items-center justify-end gap-1 mt-1 text-xs">
+                              <div className="text-sm break-words">
+                                {message.text}
+                              </div>
+                              <div className="flex items-center justify-end gap-1 mt-0.5 text-[10px] opacity-70">
                                 <span>{formatMessageTime(message.sentAt)}</span>
                                 {isOwnMessage && (
                                   <span>
@@ -1557,7 +1580,7 @@ export default function Chat() {
             </div>
 
             {/* Message Input - fixed at the bottom */}
-            <div className="border-t border-gray-200 p-3 flex-shrink-0 sticky bottom-0 bg-white z-20 shadow-sm">
+            <div className="border-t border-gray-200 p-3 flex-shrink-0 sticky bottom-0 bg-white z-[60] shadow-sm">
               <form onSubmit={sendMessage} className="flex items-center">
                 <input
                   type="text"

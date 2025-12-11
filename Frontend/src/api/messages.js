@@ -9,4 +9,4 @@ export const getMessagesByUser = (userId) =>
 
 // Send a new message to a user
 export const sendMessage = (userId, text) =>
-  axiosInstance.post(`/messages/${userId}`, { text });
+  axiosInstance.post(`/users/${userId}`, { text });

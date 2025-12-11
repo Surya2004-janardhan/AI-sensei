@@ -13,7 +13,7 @@ import { toast } from "react-toastify";
 import "../styles/toast.css";
 // Using Tailwind CSS instead of custom CSS
 
-export default function Chat() {
+const Chat = React.memo(function Chat() {
   // Messages & chat state
   const [latestChats, setLatestChats] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -27,6 +27,7 @@ export default function Chat() {
   const [isTyping, setIsTyping] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   // User state
   const { user } = useContext(AuthContext);
@@ -116,12 +117,35 @@ export default function Chat() {
 
   // Initialize socket
   useEffect(() => {
-    const socketInstance = io("https://ai-sensei-lej2.onrender.com");
+    const socketInstance = io("https://ai-sensei-lej2.onrender.com", {
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+    });
     setSocket(socketInstance);
 
     // Log connection status
     socketInstance.on("connect", () => {
       console.log("Socket connected successfully");
+      // Refresh chats and messages when reconnecting after being offline
+      if (user) {
+        fetchLatestChats();
+        if (selectedUser) {
+          fetchChatMessages(selectedUser._id);
+        }
+      }
+    });
+
+    socketInstance.on("reconnect", (attemptNumber) => {
+      console.log("Socket reconnected after", attemptNumber, "attempts");
+      // Refresh data after reconnection
+      if (user) {
+        fetchLatestChats();
+        if (selectedUser) {
+          fetchChatMessages(selectedUser._id);
+        }
+      }
     });
 
     socketInstance.on("connect_error", (err) => {
@@ -131,6 +155,7 @@ export default function Chat() {
     return () => {
       if (socketInstance) socketInstance.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Connect socket when user is available
@@ -172,8 +197,8 @@ export default function Chat() {
             });
           }
         } else if (message.from._id !== user._id) {
-          // Update latest chats
-          fetchLatestChats();
+          // Update latest chats without cache
+          fetchLatestChats(false);
         }
       });
 
@@ -244,33 +269,105 @@ export default function Chat() {
         socket.off("notificationCount");
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, user, selectedUser]);
 
-  // Fetch latest chats
-  const fetchLatestChats = async () => {
-    try {
-      const response = await messagesAPI.getLatestChats();
-      if (response && response.data) {
-        setLatestChats(response.data);
-      } else {
-        setLatestChats([]);
-        console.log("No chat data received or invalid format");
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching latest chats:", error.message);
-      setError("Failed to fetch chats");
-      setLatestChats([]);
-      setLoading(false);
-    }
-  };
+  // Fetch latest chats with frontend caching
+  const fetchLatestChats = useCallback(
+    async (useCache = true) => {
+      try {
+        // Try to get from sessionStorage cache first (valid for 2 minutes)
+        if (useCache && user) {
+          const cacheKey = `chats_${user._id}`;
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            const { data, timestamp } = JSON.parse(cached);
+            const isValid = Date.now() - timestamp < 2 * 60 * 1000; // 2 minutes
+            if (isValid && data) {
+              setLatestChats(data);
+              setLoading(false);
+              return;
+            }
+          }
+        }
 
-  // Fetch chat messages with a specific user
-  const fetchChatMessages = async (userId) => {
+        const response = await messagesAPI.getLatestChats();
+        console.log("Latest chats response:", response?.data);
+
+        if (response && response.data && Array.isArray(response.data)) {
+          // Ensure each chat has the expected structure
+          const validChats = response.data.filter(
+            (chat) => chat && chat.otherUser && chat.lastMessage
+          );
+          console.log("Valid chats after filtering:", validChats);
+          setLatestChats(validChats);
+
+          // Cache the response
+          if (user) {
+            const cacheKey = `chats_${user._id}`;
+            sessionStorage.setItem(
+              cacheKey,
+              JSON.stringify({
+                data: validChats,
+                timestamp: Date.now(),
+              })
+            );
+          }
+        } else {
+          setLatestChats([]);
+          console.log("No chat data received or invalid format", response);
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching latest chats:", error.message);
+        setError("Failed to fetch chats");
+        setLatestChats([]);
+        setLoading(false);
+      }
+    },
+    [user]
+  );
+
+  // Fetch chat messages with a specific user (with caching)
+  const fetchChatMessages = async (userId, useCache = false) => {
     setChatLoading(true);
     try {
+      // Check cache for this specific conversation
+      if (useCache && user) {
+        const cacheKey = `messages_${user._id}_${userId}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          const isValid = Date.now() - timestamp < 60 * 1000; // 1 minute
+          if (isValid && data) {
+            setChatMessages(data);
+            setChatLoading(false);
+
+            // Still scroll to bottom
+            if (scrollRef.current) {
+              setTimeout(() => {
+                scrollRef.current.scrollIntoView({ behavior: "smooth" });
+              }, 100);
+            }
+            return;
+          }
+        }
+      }
+
       const response = await messagesAPI.getMessagesByUser(userId);
       setChatMessages(response.data);
+
+      // Cache the messages
+      if (user) {
+        const cacheKey = `messages_${user._id}_${userId}`;
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            data: response.data,
+            timestamp: Date.now(),
+          })
+        );
+      }
 
       // Mark unread messages as read
       const unreadMessages = response.data.filter(
@@ -284,8 +381,8 @@ export default function Chat() {
           userId,
         });
 
-        // Update chat list to remove unread indicators
-        fetchLatestChats();
+        // Update chat list to remove unread indicators (without cache)
+        fetchLatestChats(false);
       }
 
       setChatLoading(false);
@@ -417,28 +514,30 @@ export default function Chat() {
   const handleSelectUser = (user) => {
     setSelectedUser(user);
     fetchChatMessages(user._id);
+    // Close sidebar on mobile after selecting a user
+    if (window.innerWidth < 1024) {
+      setShowSidebar(false);
+    }
   };
 
   // Send a message
   const sendMessage = async (e) => {
     e.preventDefault();
 
-    if (!chatInput.trim() || !selectedUser) return;
+    if (!chatInput.trim() || !selectedUser || sendingMessage) return;
+
+    const messageText = chatInput.trim();
+    setSendingMessage(true);
 
     try {
-      const response = await messagesAPI.sendMessage({
-        to: selectedUser._id,
-        text: chatInput,
-      });
+      await messagesAPI.sendMessage(selectedUser._id, messageText);
 
-      // Add message to chat
-      setChatMessages((prev) => [...prev, response.data]);
-
+      // Message will be added via socket receiveMessage event
       // Reset input
       setChatInput("");
 
-      // Update latest chats
-      fetchLatestChats();
+      // Update latest chats without cache
+      fetchLatestChats(false);
 
       // Scroll to bottom
       if (scrollRef.current) {
@@ -448,12 +547,20 @@ export default function Chat() {
       }
 
       // Clear typing indicator
-      socket.emit("typing", {
-        to: selectedUser._id,
-        isTyping: false,
-      });
+      if (socket) {
+        socket.emit("stopTyping", {
+          from: user._id,
+          to: selectedUser._id,
+        });
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
+      toast.error("Failed to send message. Please try again.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -461,7 +568,7 @@ export default function Chat() {
   const handleInputChange = (e) => {
     setChatInput(e.target.value);
 
-    if (selectedUser && socket) {
+    if (selectedUser && socket && user) {
       // Clear existing typing timeout
       if (typingTimeout) {
         clearTimeout(typingTimeout);
@@ -469,15 +576,15 @@ export default function Chat() {
 
       // Send typing indicator
       socket.emit("typing", {
+        from: user._id,
         to: selectedUser._id,
-        isTyping: true,
       });
 
       // Set timeout to stop typing indicator
       const timeout = setTimeout(() => {
-        socket.emit("typing", {
+        socket.emit("stopTyping", {
+          from: user._id,
           to: selectedUser._id,
-          isTyping: false,
         });
       }, 2000);
 
@@ -585,10 +692,17 @@ export default function Chat() {
     return onlineUsers.includes(userId);
   };
 
-  // Format message time
+  // Format message time (WhatsApp style - compact)
   const formatMessageTime = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return date
+      .toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .toLowerCase()
+      .replace(/\s/g, "");
   };
 
   // Format date for message groups
@@ -615,16 +729,20 @@ export default function Chat() {
       setLoading(true);
       setError("");
 
+      // Clear any stale cache on mount
+      const cacheKey = `chats_${user._id}`;
+      sessionStorage.removeItem(cacheKey);
+
       // Wrap in try/catch to ensure loading state is reset even if something fails
       try {
-        fetchLatestChats();
+        fetchLatestChats(false); // Don't use cache on initial load
         updateNotificationCount();
       } catch (error) {
         console.error("Error in initial data load:", error);
         setLoading(false);
       }
     }
-  }, [user]);
+  }, [user, fetchLatestChats]);
 
   // Fetch users when activeTab changes to "allUsers"
   useEffect(() => {
@@ -716,10 +834,10 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex h-screen bg-white relative">
+    <div className="flex h-screen max-h-screen overflow-hidden bg-white">
       {/* Mobile Toggle Button - only visible on small screens */}
       <button
-        className="md:hidden fixed z-10 top-4 left-4 bg-black text-white p-2 rounded-md"
+        className="lg:hidden fixed z-10 top-4 left-4 bg-black text-white p-2 rounded-md"
         onClick={toggleSidebar}
       >
         {showSidebar ? (
@@ -759,11 +877,11 @@ export default function Chat() {
       <div
         className={`${
           showSidebar ? "flex" : "hidden"
-        } md:flex md:w-1/3 w-full md:relative absolute z-10 bg-white border-r border-gray-200 flex-col`}
+        } lg:flex lg:w-1/3 w-full lg:relative absolute z-50 bg-white border-r border-gray-200 flex-col h-full overflow-hidden`}
       >
-        <div className="border-b border-gray-200 flex flex-wrap md:flex-nowrap">
+        <div className="border-b border-gray-200 flex flex-wrap lg:flex-nowrap sticky top-0 z-20 bg-white shadow-sm w-full">
           <button
-            className={`py-3 px-2 md:px-4 flex-1 text-center text-sm md:text-base ${
+            className={`py-3 px-1 lg:px-4 flex-1 text-center text-xs sm:text-sm md:text-sm truncate font-medium ${
               activeTab === "chats"
                 ? "bg-gray-100 text-black font-bold"
                 : "text-gray-600"
@@ -773,7 +891,7 @@ export default function Chat() {
             Chats
           </button>
           <button
-            className={`py-3 px-2 md:px-4 flex-1 text-center text-sm md:text-base ${
+            className={`py-3 px-1 lg:px-4 flex-1 text-center text-xs sm:text-sm md:text-sm truncate font-medium ${
               activeTab === "allUsers"
                 ? "bg-gray-100 font-bold text-black "
                 : "text-gray-600"
@@ -786,7 +904,7 @@ export default function Chat() {
             All Users
           </button>
           <button
-            className={`py-3 px-2 md:px-4 flex-1 text-center text-sm md:text-base ${
+            className={`py-3 px-1 lg:px-4 flex-1 text-center text-xs sm:text-sm md:text-sm truncate font-medium ${
               activeTab === "friends"
                 ? "bg-gray-100 text-black font-bold"
                 : "text-gray-600"
@@ -799,7 +917,7 @@ export default function Chat() {
             Friends
           </button>
           <button
-            className={`py-3 px-2 md:px-4 flex-1 text-center relative text-sm md:text-base ${
+            className={`py-3 px-1 lg:px-4 flex-1 text-center relative text-xs sm:text-sm md:text-sm truncate font-medium ${
               activeTab === "requests"
                 ? "bg-gray-100 font-bold text-black"
                 : "text-gray-600"
@@ -857,7 +975,7 @@ export default function Chat() {
         )}
         {/* Search bar with refresh button - visible only in All Users tab */}
         {activeTab === "allUsers" && (
-          <div className="p-3 border-b border-gray-200">
+          <div className="p-3 border-b border-gray-200 sticky top-14 bg-white z-10">
             <div className="flex items-center">
               <input
                 type="text"
@@ -867,10 +985,10 @@ export default function Chat() {
                   // Update search query without triggering API calls
                   setSearchQuery(e.target.value);
                 }}
-                className="flex-grow w-[90%] p-2 mr-[10px] border border-gray-300 rounded"
+                className="flex-grow w-[80%] p-2 mr-[10px] border border-gray-300 rounded h-10"
               />
               <button
-                className="w-[10%] p-2 bg-gray-100 hover:bg-gray-200 transition-colors border border-gray-300 border rounded"
+                className="w-[20%] p-2 bg-gray-100 hover:bg-gray-200 transition-colors border border-gray-300 rounded h-10 flex items-center justify-center"
                 onClick={() => {
                   setTimeout(() => {
                     fetchAllUsers(true);
@@ -898,10 +1016,10 @@ export default function Chat() {
           </div>
         )}{" "}
         {/* Display content based on active tab */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-hidden h-full">
           {/* Chats Tab */}
           {activeTab === "chats" && (
-            <div className="p-3">
+            <div className="p-3 h-full overflow-y-auto overflow-x-hidden pt-2">
               <div className="mb-4">
                 {/* <h3 className="text-lg font-semibold">Your Conversations</h3>
                 <p className="text-sm text-gray-600">
@@ -931,17 +1049,19 @@ export default function Chat() {
                       </div>
                       {Array.isArray(latestChats) &&
                         latestChats
-                          .filter((chat) => chat && chat.unreadCount > 0)
+                          .filter(
+                            (chat) =>
+                              chat && chat.unreadCount > 0 && chat.otherUser
+                          )
                           .map((chat) => {
-                            // Check if chat and otherUser exist to prevent render errors
-                            if (!chat || !chat.otherUser) return null;
                             const chatUser = chat.otherUser;
-                            const isOnline = isUserOnline(chatUser?._id);
+                            if (!chatUser || !chatUser._id) return null;
+                            const isOnline = isUserOnline(chatUser._id);
 
                             return (
                               <div
                                 key={chatUser._id}
-                                className={`p-3 mb-1 rounded cursor-pointer flex items-center ${
+                                className={`p-3 mb-1 rounded cursor-pointer flex items-center${
                                   selectedUser?._id === chatUser._id
                                     ? "bg-gray-200"
                                     : "hover:bg-gray-100"
@@ -957,7 +1077,7 @@ export default function Chat() {
                                     />
                                   ) : (
                                     <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                      {chatUser.name?.charAt(0).toUpperCase()}
+                                      {chatUser.name?.charAt(0).toUpperCase()}\
                                     </div>
                                   )}
                                   <span
@@ -968,7 +1088,9 @@ export default function Chat() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="font-semibold">
-                                    {chatUser.name}
+                                    <span className="truncate max-w-[150px] sm:max-w-[200px] inline-block">
+                                      {chatUser.name}
+                                    </span>
                                   </div>
                                   <div className="text-sm text-gray-600 truncate">
                                     {chat.lastMessage ? (
@@ -1009,10 +1131,10 @@ export default function Chat() {
                     </div>
                     {Array.isArray(latestChats) &&
                       latestChats.map((chat) => {
-                        // Check if chat and otherUser exist to prevent render errors
-                        if (!chat || !chat.otherUser) return null;
+                        if (!chat || !chat.otherUser || !chat.otherUser._id)
+                          return null;
                         const chatUser = chat.otherUser;
-                        const isOnline = isUserOnline(chatUser?._id);
+                        const isOnline = isUserOnline(chatUser._id);
 
                         return (
                           <div
@@ -1044,7 +1166,9 @@ export default function Chat() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="font-semibold">
-                                {chatUser.name}
+                                <span className="truncate max-w-[150px] sm:max-w-[200px] inline-block">
+                                  {chatUser.name}
+                                </span>
                               </div>
                               <div className="text-sm text-gray-600 truncate">
                                 {chat.lastMessage ? (
@@ -1084,7 +1208,7 @@ export default function Chat() {
 
           {/* All Users Tab */}
           {activeTab === "allUsers" && (
-            <div className="p-3">
+            <div className="p-3 h-full overflow-y-auto overflow-x-hidden">
               <div className="mb-4">
                 <h3 className="text-lg font-semibold"></h3>
               </div>
@@ -1124,7 +1248,7 @@ export default function Chat() {
                   return (
                     <div
                       key={u._id}
-                      className="p-3 mb-2 border-b border-gray-100 flex items-center justify-between"
+                      className="p-3 mb-2 border-b border-gray-100 flex items-center justify-between overflow-hidden"
                     >
                       <div className="flex items-center">
                         <div className="relative mr-3">
@@ -1146,25 +1270,41 @@ export default function Chat() {
                           ></span>
                         </div>
                         <div>
-                          <div className="font-semibold">{u.name}</div>
-                          <div className="text-xs text-gray-500">
-                            {u.bio || "No bio available"}
+                          <div className="font-semibold truncate max-w-[150px] sm:max-w-[200px]">
+                            {u.name}
                           </div>
                         </div>
                       </div>
                       <div>
                         {isFriend ? (
                           <button
-                            className="px-3 py-1 bg-gray-200 text-black text-sm rounded-md"
+                            className="p-2 bg-gray-200 text-black rounded-full flex items-center justify-center"
                             onClick={() => handleSelectUser(u)}
+                            title="Message"
                           >
-                            Message
-                          </button>
-                        ) : requestSent ? (
-                          <span className="px-3 py-1 bg-gray-200 text-gray-600 text-sm rounded-md flex items-center">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4 mr-1"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                              />
+                            </svg>
+                          </button>
+                        ) : requestSent ? (
+                          <span
+                            className="p-2 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center"
+                            title="Request Sent"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
                               fill="none"
                               viewBox="0 0 24 24"
                               stroke="currentColor"
@@ -1176,19 +1316,19 @@ export default function Chat() {
                                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                               />
                             </svg>
-                            Request Sent
                           </span>
                         ) : (
                           <button
-                            className="px-3 py-1 bg-black text-white text-sm rounded-md flex items-center"
+                            className="p-2 bg-black text-white rounded-full flex items-center justify-center"
                             onClick={() => {
                               console.log("Adding friend:", u._id);
                               sendFriendRequest(u._id);
                             }}
+                            title="Add Friend"
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4 mr-1"
+                              className="h-5 w-5"
                               fill="none"
                               viewBox="0 0 24 24"
                               stroke="currentColor"
@@ -1200,7 +1340,6 @@ export default function Chat() {
                                 d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
                               />
                             </svg>
-                            Add Friend
                           </button>
                         )}
                       </div>
@@ -1213,7 +1352,7 @@ export default function Chat() {
 
           {/* Friends Tab */}
           {activeTab === "friends" && (
-            <div className="p-3">
+            <div className="p-3 h-full overflow-y-auto overflow-x-hidden">
               {/* <h3 className="text-lg font-semibold mb-4">Your Friends</h3> */}
               {friends.length === 0 ? (
                 <div className="text-center py-10">
@@ -1234,7 +1373,7 @@ export default function Chat() {
                   return (
                     <div
                       key={friend._id}
-                      className="p-3 mb-2 border-b border-gray-100 flex items-center justify-between"
+                      className="p-3 mb-2 border-b border-gray-100 flex items-center justify-between overflow-hidden"
                     >
                       <div className="flex items-center">
                         <div className="relative mr-3">
@@ -1256,7 +1395,9 @@ export default function Chat() {
                           ></span>
                         </div>
                         <div>
-                          <div className="font-semibold">{friend.name}</div>
+                          <div className="font-semibold truncate max-w-[150px] sm:max-w-[200px]">
+                            {friend.name}
+                          </div>
                           <div className="text-xs text-gray-500">
                             {isOnline ? "Online" : "Offline"}
                           </div>
@@ -1277,7 +1418,7 @@ export default function Chat() {
 
           {/* Friend Requests Tab */}
           {activeTab === "requests" && (
-            <div className="p-3">
+            <div className="p-3 h-full overflow-y-auto overflow-x-hidden">
               {/* <h3 className="text-lg font-semibold mb-4">Friend Requests</h3> */}
               {friendRequests.length === 0 ? (
                 <p className="text-center py-4 text-gray-500">
@@ -1287,7 +1428,7 @@ export default function Chat() {
                 friendRequests.map((request) => (
                   <div
                     key={request._id}
-                    className="p-3 mb-2 border-b border-gray-100 flex items-center justify-between"
+                    className="p-3 mb-2 border-b border-gray-100 flex items-center justify-between overflow-hidden"
                   >
                     <div className="flex items-center">
                       <div className="relative mr-3">
@@ -1336,16 +1477,16 @@ export default function Chat() {
       <div
         className={`${
           showSidebar ? "hidden" : "flex"
-        } md:flex md:w-2/3 w-full flex-col`}
+        } lg:flex lg:w-2/3 w-full flex-col h-full bg-white overflow-hidden`}
       >
         {selectedUser ? (
-          <>
+          <div className="flex flex-col h-full max-h-full overflow-hidden">
             {/* Chat Header */}
-            <div className="border-b border-gray-200 p-3 flex items-center justify-between">
+            <div className="border-b border-gray-200 p-3 flex items-center justify-between sticky top-0 bg-white z-[60] shadow-sm">
               <div className="flex items-center">
                 {/* Mobile back button - only on small screens */}
                 <button
-                  className="md:hidden mr-2 text-gray-600"
+                  className="lg:hidden mr-2 text-gray-600"
                   onClick={toggleSidebar}
                 >
                   <svg
@@ -1385,7 +1526,9 @@ export default function Chat() {
                   ></span>
                 </div>
                 <div>
-                  <div className="font-semibold">{selectedUser.name}</div>
+                  <div className="font-semibold truncate max-w-[150px] sm:max-w-[200px]">
+                    {selectedUser.name}
+                  </div>
                   <div className="text-xs text-gray-500">
                     {isUserOnline(selectedUser._id) ? "Online" : "Offline"}
                   </div>
@@ -1441,8 +1584,8 @@ export default function Chat() {
               })()}
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+            {/* Messages content area */}
+            <div className="flex-1 overflow-y-auto p-4 bg-gray-50 pb-2">
               {chatLoading ? (
                 <div className="flex justify-center items-center h-full">
                   <p>Loading messages...</p>
@@ -1477,8 +1620,10 @@ export default function Chat() {
                                   : "bg-gray-200 text-black rounded-bl-none"
                               }`}
                             >
-                              <div className="text-sm">{message.text}</div>
-                              <div className="flex items-center justify-end gap-1 mt-1 text-xs">
+                              <div className="text-sm break-words">
+                                {message.text}
+                              </div>
+                              <div className="flex items-center justify-end gap-1 mt-0.5 text-[10px] opacity-70">
                                 <span>{formatMessageTime(message.sentAt)}</span>
                                 {isOwnMessage && (
                                   <span>
@@ -1510,20 +1655,27 @@ export default function Chat() {
               <div ref={scrollRef} />
             </div>
 
-            {/* Message Input */}
-            <div className="border-t border-gray-200 p-3">
+            {/* Message Input - fixed at the bottom */}
+            <div className="border-t border-gray-200 p-3 flex-shrink-0 sticky bottom-0 bg-white z-[60] shadow-sm">
               <form onSubmit={sendMessage} className="flex items-center">
                 <input
                   type="text"
                   value={chatInput}
                   onChange={handleInputChange}
                   placeholder="Type a message..."
-                  className="flex-1 p-2 border border-gray-300 rounded-l-md focus:outline-none focus:border-gray-500"
+                  className="flex-1 p-2 border border-gray-300 rounded-l-md focus:outline-none focus:border-gray-500 h-10"
+                  disabled={!selectedUser}
                 />
                 <button
                   type="submit"
-                  className="bg-black text-white px-3 sm:px-4 py-2 rounded-r-md"
-                  disabled={!chatInput.trim()}
+                  className={`${
+                    !chatInput.trim() || sendingMessage
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-black hover:bg-gray-800"
+                  } text-white px-3 sm:px-4 py-2 rounded-r-md h-10 flex items-center justify-center transition-colors`}
+                  disabled={
+                    !chatInput.trim() || !selectedUser || sendingMessage
+                  }
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -1540,7 +1692,7 @@ export default function Chat() {
                 </button>
               </form>
             </div>
-          </>
+          </div>
         ) : (
           <div className="flex flex-col justify-center items-center h-full bg-gray-50">
             <div className="text-center p-6">
@@ -1610,4 +1762,6 @@ export default function Chat() {
       </style>
     </div>
   );
-}
+});
+
+export default Chat;

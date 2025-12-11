@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
+const compression = require("compression");
 
 const connectDB = require("./config/db");
 
@@ -10,9 +11,15 @@ const connectDB = require("./config/db");
 const app = express();
 const server = http.createServer(app);
 
-// Basic middleware setup first - before any route handling
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Enable compression for responses
+app.use(compression());
+
+// Basic middleware setup with size limits
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Disable x-powered-by header for security
+app.disable("x-powered-by");
 
 // Simple CORS setup
 app.use((req, res, next) => {
@@ -81,6 +88,7 @@ app.use("/api/wordoftheday", wordOfTheDayRoutes);
 
 // Basic root route to check server
 app.get("/", (req, res) => {
+  res.set("Cache-Control", "public, max-age=300"); // 5 minutes
   res.send("Welcome to AI-Sensei Backend API");
 });
 

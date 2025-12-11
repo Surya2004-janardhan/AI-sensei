@@ -1,3 +1,4 @@
+import React, { lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -7,18 +8,29 @@ import {
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Login from "./pages/Login.jsx";
-import Register from "./pages/Register.jsx";
-import Home from "./pages/Home.jsx";
-import Profile from "./pages/Profile.jsx";
-import Dictionary from "./pages/Dictionary.jsx";
-import Roadmaps from "./pages/Roadmaps.jsx";
-import Quiz from "./pages/Quiz.jsx";
-import AITeacher from "./pages/AITeacher.jsx";
-import DoubtSolver from "./pages/DoubtSolver.jsx";
-import Chat from "./pages/ChatNew.jsx";
 import Navbar from "./components/Navbar.jsx";
 import { useAuth } from "./contexts/AuthContext";
+
+// Lazy load pages for better performance
+const Login = lazy(() => import("./pages/Login.jsx"));
+const Register = lazy(() => import("./pages/Register.jsx"));
+const Home = lazy(() => import("./pages/Home.jsx"));
+const Profile = lazy(() => import("./pages/Profile.jsx"));
+const Dictionary = lazy(() => import("./pages/Dictionary.jsx"));
+const Roadmaps = lazy(() => import("./pages/Roadmaps.jsx"));
+const Quiz = lazy(() => import("./pages/Quiz.jsx"));
+const AITeacher = lazy(() => import("./pages/AITeacher.jsx"));
+const DoubtSolver = lazy(() => import("./pages/DoubtSolver.jsx"));
+const Chat = lazy(() => import("./pages/ChatNew.jsx"));
+
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <svg className="animate-spin h-12 w-12 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  </div>
+);
 
 function App() {
   const { user, loading } = useAuth();
@@ -54,8 +66,9 @@ function App() {
 
   return (
     <Router>
-      <Navbar />
-      <main className=" min-h-dvh w-full font-japanese text-text-primary bg-white">
+      <div className="min-h-screen bg-background-pink font-japanese text-text-primary">
+        <Navbar />
+        <Suspense fallback={<LoadingSpinner />}>
         <Routes>
           <Route
             path="/login"
@@ -99,6 +112,7 @@ function App() {
           />
           {/* Add 404 or redirect route here if desired */}
         </Routes>
+        </Suspense>
         <ToastContainer
           position="top-right"
           autoClose={3000}

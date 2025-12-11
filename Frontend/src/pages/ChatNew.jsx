@@ -13,7 +13,7 @@ import { toast } from "react-toastify";
 import "../styles/toast.css";
 // Using Tailwind CSS instead of custom CSS
 
-export default function Chat() {
+const Chat = React.memo(function Chat() {
   // Messages & chat state
   const [latestChats, setLatestChats] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -1751,4 +1751,6 @@ export default function Chat() {
       </style>
     </div>
   );
-}
+});
+
+export default Chat;

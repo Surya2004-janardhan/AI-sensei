@@ -88,103 +88,139 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Forgot Password?
-          </h1>
-          <p className="text-gray-600">
-            {step === 1
-              ? "Enter your email to receive an OTP"
-              : "Enter OTP and your new password"}
-          </p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-white px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md border border-black/20 bg-white p-6 sm:p-10 rounded-lg shadow-lg">
+        <h1 className="text-4xl font-extrabold text-black mb-10 text-center font-sans tracking-tight">
+          {step === 1 ? "Forgot Password" : "Reset Password"}
+        </h1>
 
         {step === 1 ? (
-          <form onSubmit={handleSendOTP} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
-                placeholder="your.email@example.com"
-                disabled={loading}
-              />
-            </div>
+          <form onSubmit={handleSendOTP} className="space-y-5">
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-black/40 rounded-md text-black placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 text-sm sm:text-base"
+              required
+              disabled={loading}
+              autoComplete="email"
+            />
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full py-3 rounded-md font-semibold tracking-wide text-white transition duration-150 ease-in-out focus:outline-none focus:ring-4 focus:ring-black/70 ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-black hover:bg-gray-900 hover:scale-[1.03]"
+              }`}
             >
-              {loading ? "Sending..." : "Send OTP"}
+              {loading ? (
+                <svg
+                  className="animate-spin h-6 w-6 mx-auto"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+              ) : (
+                "Send OTP"
+              )}
             </button>
           </form>
         ) : (
-          <form onSubmit={handleResetPassword} className="space-y-6">
+          <form onSubmit={handleResetPassword} className="space-y-5">
             {timer > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                <p className="text-sm text-blue-800">
+              <div className="bg-black/5 border border-black/20 rounded-md p-3 text-center mb-4">
+                <p className="text-sm text-black/80">
                   OTP expires in:{" "}
-                  <span className="font-bold">{formatTime(timer)}</span>
+                  <span className="font-bold text-black">
+                    {formatTime(timer)}
+                  </span>
                 </p>
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Enter OTP
-              </label>
-              <input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                maxLength={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-center text-2xl tracking-widest"
-                placeholder="000000"
-                disabled={loading}
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Enter 6-digit OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+              maxLength={6}
+              className="w-full px-4 py-3 border border-black/40 rounded-md text-black placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 text-center text-2xl tracking-widest font-bold"
+              required
+              disabled={loading}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Password
-              </label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
-                placeholder="Enter new password"
-                disabled={loading}
-              />
-            </div>
+            <input
+              type="password"
+              placeholder="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-black/40 rounded-md text-black placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 text-sm sm:text-base"
+              required
+              disabled={loading}
+              autoComplete="new-password"
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
-                placeholder="Confirm new password"
-                disabled={loading}
-              />
-            </div>
+            <input
+              type="password"
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-black/40 rounded-md text-black placeholder-black/60 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 text-sm sm:text-base"
+              required
+              disabled={loading}
+              autoComplete="new-password"
+            />
 
             <button
               type="submit"
               disabled={loading || timer === 0}
-              className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full py-3 rounded-md font-semibold tracking-wide text-white transition duration-150 ease-in-out focus:outline-none focus:ring-4 focus:ring-black/70 ${
+                loading || timer === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-black hover:bg-gray-900 hover:scale-[1.03]"
+              }`}
             >
-              {loading ? "Resetting..." : "Reset Password"}
+              {loading ? (
+                <svg
+                  className="animate-spin h-6 w-6 mx-auto"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+              ) : (
+                "Reset Password"
+              )}
             </button>
 
             {timer === 0 && (
@@ -196,9 +232,9 @@ const ForgotPassword = () => {
                   setNewPassword("");
                   setConfirmPassword("");
                 }}
-                className="w-full text-purple-600 hover:text-purple-700 font-medium"
+                className="w-full text-center text-sm text-gray-600 hover:text-black hover:underline transition"
               >
-                Request New OTP
+                OTP Expired? Request New OTP
               </button>
             )}
           </form>
@@ -207,7 +243,7 @@ const ForgotPassword = () => {
         <div className="mt-6 text-center">
           <button
             onClick={() => navigate("/login")}
-            className="text-sm text-gray-600 hover:text-gray-800"
+            className="text-sm text-gray-600 hover:text-black hover:underline transition"
           >
             ← Back to Login
           </button>

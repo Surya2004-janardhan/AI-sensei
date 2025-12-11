@@ -1574,7 +1574,9 @@ export default function Chat() {
                       ? "bg-gray-400 cursor-not-allowed"
                       : "bg-black hover:bg-gray-800"
                   } text-white px-3 sm:px-4 py-2 rounded-r-md h-10 flex items-center justify-center transition-colors`}
-                  disabled={!chatInput.trim() || !selectedUser || sendingMessage}
+                  disabled={
+                    !chatInput.trim() || !selectedUser || sendingMessage
+                  }
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

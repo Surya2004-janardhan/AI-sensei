@@ -46,7 +46,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen min-h-[100dvh] flex items-center justify-center bg-white px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-white px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md border border-black/20 bg-white p-6 sm:p-10 rounded-lg shadow-lg">
         <h1 className="text-4xl font-extrabold text-black mb-10 text-center font-sans tracking-tight">
           Login
@@ -116,6 +116,27 @@ export default function Login() {
             )}
           </button>
         </form>
+
+        <div className="mt-6 space-y-3">
+          <div className="text-center">
+            <button
+              onClick={() => navigate("/forgot-password")}
+              className="text-sm text-gray-600 hover:text-black hover:underline transition"
+            >
+              Forgot Password?
+            </button>
+          </div>
+
+          <div className="text-center text-sm text-gray-600">
+            Don't have an account?{" "}
+            <button
+              onClick={() => navigate("/register")}
+              className="text-black font-semibold hover:underline"
+            >
+              Sign Up
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

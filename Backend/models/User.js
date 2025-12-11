@@ -21,6 +21,10 @@ const UserSchema = new mongoose.Schema({
   // Incoming friend requests user IDs
   friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
+  // OTP for password reset
+  resetOTP: { type: String },
+  resetOTPExpiry: { type: Date },
+
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -26,6 +26,13 @@ exports.getLatestChats = async (req, res) => {
       .populate("from to", "name avatar _id")
       .exec();
 
+    console.log(`Found ${messages.length} messages for user ${req.user.id}`);
+
+    // If no messages, return empty array early
+    if (messages.length === 0) {
+      return res.json([]);
+    }
+
     const grouped = {};
     messages.forEach((msg) => {
       const otherId = msg.from._id.equals(req.user.id)

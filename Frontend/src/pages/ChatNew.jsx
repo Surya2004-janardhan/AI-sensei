@@ -292,8 +292,15 @@ const Chat = React.memo(function Chat() {
         }
 
         const response = await messagesAPI.getLatestChats();
-        if (response && response.data) {
-          setLatestChats(response.data);
+        console.log("Latest chats response:", response?.data);
+
+        if (response && response.data && Array.isArray(response.data)) {
+          // Ensure each chat has the expected structure
+          const validChats = response.data.filter(
+            (chat) => chat && chat.otherUser && chat.lastMessage
+          );
+          console.log("Valid chats after filtering:", validChats);
+          setLatestChats(validChats);
 
           // Cache the response
           if (user) {
@@ -301,14 +308,14 @@ const Chat = React.memo(function Chat() {
             sessionStorage.setItem(
               cacheKey,
               JSON.stringify({
-                data: response.data,
+                data: validChats,
                 timestamp: Date.now(),
               })
             );
           }
         } else {
           setLatestChats([]);
-          console.log("No chat data received or invalid format");
+          console.log("No chat data received or invalid format", response);
         }
         setLoading(false);
       } catch (error) {
@@ -722,9 +729,13 @@ const Chat = React.memo(function Chat() {
       setLoading(true);
       setError("");
 
+      // Clear any stale cache on mount
+      const cacheKey = `chats_${user._id}`;
+      sessionStorage.removeItem(cacheKey);
+
       // Wrap in try/catch to ensure loading state is reset even if something fails
       try {
-        fetchLatestChats();
+        fetchLatestChats(false); // Don't use cache on initial load
         updateNotificationCount();
       } catch (error) {
         console.error("Error in initial data load:", error);

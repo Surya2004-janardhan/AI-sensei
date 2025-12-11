@@ -197,8 +197,8 @@ export default function Chat() {
             });
           }
         } else if (message.from._id !== user._id) {
-          // Update latest chats
-          fetchLatestChats();
+          // Update latest chats without cache
+          fetchLatestChats(false);
         }
       });
 
@@ -269,33 +269,98 @@ export default function Chat() {
         socket.off("notificationCount");
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, user, selectedUser]);
 
-  // Fetch latest chats
-  const fetchLatestChats = async () => {
-    try {
-      const response = await messagesAPI.getLatestChats();
-      if (response && response.data) {
-        setLatestChats(response.data);
-      } else {
-        setLatestChats([]);
-        console.log("No chat data received or invalid format");
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching latest chats:", error.message);
-      setError("Failed to fetch chats");
-      setLatestChats([]);
-      setLoading(false);
-    }
-  };
+  // Fetch latest chats with frontend caching
+  const fetchLatestChats = useCallback(
+    async (useCache = true) => {
+      try {
+        // Try to get from sessionStorage cache first (valid for 2 minutes)
+        if (useCache && user) {
+          const cacheKey = `chats_${user._id}`;
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            const { data, timestamp } = JSON.parse(cached);
+            const isValid = Date.now() - timestamp < 2 * 60 * 1000; // 2 minutes
+            if (isValid && data) {
+              setLatestChats(data);
+              setLoading(false);
+              return;
+            }
+          }
+        }
 
-  // Fetch chat messages with a specific user
-  const fetchChatMessages = async (userId) => {
+        const response = await messagesAPI.getLatestChats();
+        if (response && response.data) {
+          setLatestChats(response.data);
+
+          // Cache the response
+          if (user) {
+            const cacheKey = `chats_${user._id}`;
+            sessionStorage.setItem(
+              cacheKey,
+              JSON.stringify({
+                data: response.data,
+                timestamp: Date.now(),
+              })
+            );
+          }
+        } else {
+          setLatestChats([]);
+          console.log("No chat data received or invalid format");
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching latest chats:", error.message);
+        setError("Failed to fetch chats");
+        setLatestChats([]);
+        setLoading(false);
+      }
+    },
+    [user]
+  );
+
+  // Fetch chat messages with a specific user (with caching)
+  const fetchChatMessages = async (userId, useCache = false) => {
     setChatLoading(true);
     try {
+      // Check cache for this specific conversation
+      if (useCache && user) {
+        const cacheKey = `messages_${user._id}_${userId}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          const isValid = Date.now() - timestamp < 60 * 1000; // 1 minute
+          if (isValid && data) {
+            setChatMessages(data);
+            setChatLoading(false);
+
+            // Still scroll to bottom
+            if (scrollRef.current) {
+              setTimeout(() => {
+                scrollRef.current.scrollIntoView({ behavior: "smooth" });
+              }, 100);
+            }
+            return;
+          }
+        }
+      }
+
       const response = await messagesAPI.getMessagesByUser(userId);
       setChatMessages(response.data);
+
+      // Cache the messages
+      if (user) {
+        const cacheKey = `messages_${user._id}_${userId}`;
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            data: response.data,
+            timestamp: Date.now(),
+          })
+        );
+      }
 
       // Mark unread messages as read
       const unreadMessages = response.data.filter(
@@ -309,8 +374,8 @@ export default function Chat() {
           userId,
         });
 
-        // Update chat list to remove unread indicators
-        fetchLatestChats();
+        // Update chat list to remove unread indicators (without cache)
+        fetchLatestChats(false);
       }
 
       setChatLoading(false);
@@ -464,8 +529,8 @@ export default function Chat() {
       // Reset input
       setChatInput("");
 
-      // Update latest chats
-      fetchLatestChats();
+      // Update latest chats without cache
+      fetchLatestChats(false);
 
       // Scroll to bottom
       if (scrollRef.current) {
@@ -666,7 +731,7 @@ export default function Chat() {
         setLoading(false);
       }
     }
-  }, [user]);
+  }, [user, fetchLatestChats]);
 
   // Fetch users when activeTab changes to "allUsers"
   useEffect(() => {

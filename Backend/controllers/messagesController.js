@@ -1,8 +1,24 @@
 const Message = require("../models/Message");
 
-// Get latest chats per contact (WhatsApp-style chat sidebar, top 3)
+// Cache for latest chats (5 minutes TTL)
+const chatsCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Clear cache entry for a user
+const clearChatCache = (userId) => {
+  chatsCache.delete(userId);
+};
+
+// Get latest chats per contact (all conversations)
 exports.getLatestChats = async (req, res) => {
   try {
+    // Check cache first
+    const cacheKey = req.user.id;
+    const cached = chatsCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return res.json(cached.data);
+    }
+
     const messages = await Message.find({
       $or: [{ from: req.user.id }, { to: req.user.id }],
     })
@@ -13,20 +29,60 @@ exports.getLatestChats = async (req, res) => {
     const grouped = {};
     messages.forEach((msg) => {
       const otherId = msg.from._id.equals(req.user.id)
-        ? msg.to._id
-        : msg.from._id;
+        ? msg.to._id.toString()
+        : msg.from._id.toString();
       if (!grouped[otherId]) grouped[otherId] = msg;
     });
 
-    const latest = Object.values(grouped)
-      .sort((a, b) => b.sentAt - a.sentAt)
-      .slice(0, 3);
+    // Format response with otherUser, lastMessage, and unreadCount
+    const formattedChats = await Promise.all(
+      Object.values(grouped).map(async (msg) => {
+        const otherId = msg.from._id.equals(req.user.id)
+          ? msg.to._id
+          : msg.from._id;
+        const otherUser = msg.from._id.equals(req.user.id) ? msg.to : msg.from;
 
-    res.json(latest);
+        // Count unread messages from this user
+        const unreadCount = await Message.countDocuments({
+          from: otherId,
+          to: req.user.id,
+          read: false,
+        });
+
+        return {
+          otherUser,
+          lastMessage: {
+            _id: msg._id,
+            text: msg.text,
+            from: msg.from._id,
+            to: msg.to._id,
+            sentAt: msg.sentAt,
+            read: msg.read,
+          },
+          unreadCount,
+        };
+      })
+    );
+
+    const sortedChats = formattedChats.sort(
+      (a, b) => new Date(b.lastMessage.sentAt) - new Date(a.lastMessage.sentAt)
+    );
+
+    // Cache the result
+    chatsCache.set(cacheKey, {
+      data: sortedChats,
+      timestamp: Date.now(),
+    });
+
+    res.json(sortedChats);
   } catch (err) {
+    console.error("Error fetching latest chats:", err);
     res.status(500).json({ error: "Failed to fetch latest messages" });
   }
 };
+
+// Export cache clear function for use in sendMessage
+exports.clearChatCache = clearChatCache;
 
 // Get message thread with a specific user
 exports.getChatWithUser = async (req, res) => {
@@ -72,6 +128,10 @@ exports.sendMessage = async (req, res) => {
     const populatedMessage = await Message.findById(message._id)
       .populate("from to", "name avatar _id")
       .lean();
+
+    // Clear cache for both users
+    clearChatCache(req.user.id);
+    clearChatCache(req.params.userId);
 
     // Emit socket event using the io instance
     const io = req.app.get("io");

@@ -44,10 +44,12 @@ Ai-sensei/
 
 ### **Authentication** (`/api/auth`)
 
-| Method | Endpoint    | Description                           |
-| ------ | ----------- | ------------------------------------- |
-| POST   | `/register` | Create new user account               |
-| POST   | `/login`    | Login with credentials, get JWT token |
+| Method | Endpoint           | Description                                    |
+| ------ | ------------------ | ---------------------------------------------- |
+| POST   | `/register`        | Create new user account (password auto-hashed) |
+| POST   | `/login`           | Login with credentials, get JWT token          |
+| POST   | `/forgot-password` | Send OTP to email (valid for 3 minutes)        |
+| POST   | `/reset-password`  | Reset password using OTP                       |
 
 ### **User Management** (`/api/user`)
 
@@ -141,6 +143,16 @@ Ai-sensei/
 - New user registration
 - Email, name, password fields
 - Auto-login after registration
+- Password hashed with bcrypt
+
+#### **ForgotPassword.jsx** (`/forgot-password`)
+
+- Two-step password recovery
+- Step 1: Enter email to receive OTP
+- Step 2: Enter OTP + new password
+- OTP valid for 3 minutes with countdown timer
+- Resend OTP option after expiry
+- Real-time validation
 
 #### **Profile.jsx** (`/profile`)
 
@@ -259,14 +271,25 @@ cd Backend
 npm install
 ```
 
-Create `.env` file:
+Create `.env` file (or copy from `.env.example`):
 
 ```env
 MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
 GROQ_API_KEY=your_groq_api_key
 PORT=3000
+
+# Email Configuration for OTP (Gmail)
+EMAIL_USER=your_gmail@gmail.com
+EMAIL_PASS=your_app_specific_password
 ```
+
+**Gmail App Password Setup:**
+
+1. Enable 2-Factor Authentication on your Gmail
+2. Visit: https://myaccount.google.com/apppasswords
+3. Generate "App Password" for Mail
+4. Use the 16-character password as `EMAIL_PASS`
 
 Start server:
 
@@ -308,7 +331,8 @@ npm run dev
 - `mongoose` - MongoDB ODM
 - `socket.io` - Real-time communication
 - `jsonwebtoken` - JWT auth
-- `bcryptjs` - Password hashing
+- `bcryptjs` - Password hashing (salt rounds: 10)
+- `nodemailer` - Email service for OTP
 - `compression` - Response compression
 - `groq-sdk` - AI integration
 - `cors` - CORS handling
@@ -326,13 +350,16 @@ npm run dev
 
 ## 🔒 Security Features
 
-- JWT-based authentication
-- Password hashing with bcrypt
+- JWT-based authentication with 30h expiry
+- Password hashing with bcrypt (10 salt rounds)
+- OTP-based password reset (3-minute validity)
 - Protected routes (middleware)
+- Email verification for password recovery
 - CORS configured
 - XSS protection (disabled x-powered-by)
 - Input validation
 - Secure socket connections
+- Automatic OTP cleanup on expiry
 
 ---
 

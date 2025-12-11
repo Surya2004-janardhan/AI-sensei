@@ -14,6 +14,7 @@ import { useAuth } from "./contexts/AuthContext";
 // Lazy load pages for better performance
 const Login = lazy(() => import("./pages/Login.jsx"));
 const Register = lazy(() => import("./pages/Register.jsx"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword.jsx"));
 const Home = lazy(() => import("./pages/Home.jsx"));
 const Profile = lazy(() => import("./pages/Profile.jsx"));
 const Dictionary = lazy(() => import("./pages/Dictionary.jsx"));
@@ -93,6 +94,10 @@ function App() {
             <Route
               path="/register"
               element={!user ? <Register /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/forgot-password"
+              element={!user ? <ForgotPassword /> : <Navigate to="/" />}
             />
             <Route
               path="/"

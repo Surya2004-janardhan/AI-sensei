@@ -23,6 +23,7 @@
     "jsonwebtoken": "^9.0.2",
     "langchain": "^0.3.30",
     "mongoose": "^8.17.0",
+    "nodemailer": "^7.0.11",
     "socket.io": "^4.8.1",
     "wanakana": "^5.3.1"
   },

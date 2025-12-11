@@ -358,14 +358,6 @@ Contributions welcome! Please:
 
 ---
 
-## 📧 Contact
-
-**Developer:** Chintala Janardhan  
-**Email:** chintalajanardhan2004@gmail.com  
-**Repository:** [github.com/Surya2004-janardhan/AI-sensei](https://github.com/Surya2004-janardhan/AI-sensei)
-
----
-
 ## 📄 License
 
 Educational project for Japanese language learning. All rights reserved.

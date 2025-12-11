@@ -1,4 +1,4 @@
-# AI Sensei – MERN AI-Powered Japanese Tutor
+# AI Sensei – AI-Powered Japanese Tutor
 
 **AI Sensei** is an all-in-one Japanese learning platform built with the MERN stack (MongoDB, Express.js, React, Node.js). Features include JWT authentication, AI-powered teaching assistants, real-time chat, JLPT study roadmaps, and a clean, responsive UI.
 

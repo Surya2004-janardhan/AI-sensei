@@ -12,12 +12,12 @@ export default function Navbar() {
   };
 
   return (
-    <header className="bg-white border-b border-black/10 sticky top-0 z-50 shadow">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex justify-between items-center relative">
+    <header className="bg-white border-b border-black/10 sticky top-0 z-50 shadow-md">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center relative">
         {/* Brand */}
         <Link
           to="/"
-          className="text-xl sm:text-2xl font-bold tracking-tight text-black transition-transform hover:scale-110"
+          className="text-2xl sm:text-3xl font-extrabold tracking-tight text-black transition-all hover:scale-105 font-sans"
           onClick={handleCloseMenus}
         >
           AI Sensei
@@ -63,16 +63,17 @@ export default function Navbar() {
             ${menuOpen ? "flex" : "hidden"} lg:flex
             flex-col lg:flex-row
             lg:items-center
-            space-y-2 lg:space-y-0 lg:space-x-6
-            text-base font-medium text-black
+            space-y-2 lg:space-y-0 lg:space-x-4
+            text-base font-semibold text-black
             absolute lg:static top-full left-0
             bg-white lg:bg-transparent
             w-full lg:w-auto
             p-4 lg:p-0
             rounded-b-lg lg:rounded-none
-            shadow-md lg:shadow-none
+            shadow-lg lg:shadow-none
             transition-all duration-200
             z-40 lg:z-auto
+            font-sans
           `}
         >
           {user ? (
@@ -88,7 +89,7 @@ export default function Navbar() {
                   key={to}
                   to={to}
                   onClick={handleCloseMenus}
-                  className="px-3 py-2 rounded hover:bg-black hover:text-white transition-colors w-full lg:w-auto text-left"
+                  className="px-4 py-2 rounded-md hover:bg-black hover:text-white transition-all duration-200 w-full lg:w-auto text-left hover:scale-105"
                 >
                   {label}
                 </Link>
@@ -99,7 +100,7 @@ export default function Navbar() {
                   logout();
                   handleCloseMenus();
                 }}
-                className="px-3 py-2 rounded border border-black font-semibold bg-white text-black hover:bg-black hover:text-white transition-all w-full lg:w-auto"
+                className="px-4 py-2 rounded-md border-2 border-black font-semibold bg-white text-black hover:bg-black hover:text-white transition-all duration-200 w-full lg:w-auto hover:scale-105"
               >
                 Logout
               </button>
@@ -109,14 +110,14 @@ export default function Navbar() {
               <Link
                 to="/login"
                 onClick={handleCloseMenus}
-                className="px-3 py-2 rounded hover:bg-black hover:text-white transition-colors w-full lg:w-auto text-left"
+                className="px-4 py-2 rounded-md hover:bg-black hover:text-white transition-all duration-200 w-full lg:w-auto text-left hover:scale-105"
               >
                 Login
               </Link>
               <Link
                 to="/register"
                 onClick={handleCloseMenus}
-                className="px-3 py-2 rounded hover:bg-black hover:text-white transition-colors w-full lg:w-auto text-left"
+                className="px-4 py-2 rounded-md border-2 border-black bg-black text-white hover:bg-white hover:text-black transition-all duration-200 w-full lg:w-auto text-left hover:scale-105"
               >
                 Register
               </Link>

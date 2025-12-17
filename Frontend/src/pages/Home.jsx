@@ -49,8 +49,8 @@ export default function Home() {
           tata testha dentho
         </h2> */}
         <div className=" flex mt-0 flex-col md:flex-row items-center md:items-start w-full justify-center mb-4 md:mb-8">
-          <aside className="hidden md:flex w-full md:w-64 bg-white border border-black/20 rounded-lg shadow-md p-4 md:p-5 font-serifJapanese flex-col items-center self-start md:mr-12 mr-0">
-            <h2 className=" text-lg font-semibold mb-3 border-b border-black/20 pb-1 w-full text-center">
+          <aside className="hidden md:flex w-full md:w-64 bg-white border border-black/20 rounded-lg shadow-md p-4 md:p-5 font-sans flex-col items-center self-start md:mr-12 mr-0">
+            <h2 className="text-lg font-bold mb-3 border-b border-black/20 pb-1 w-full text-center">
               Word of the Day
             </h2>
             {wordOfTheDay ? (
@@ -86,8 +86,8 @@ export default function Home() {
             </span>
           </div>
 
-          <aside className=" hidden md:flex w-full md:w-64 bg-white border border-black/20 rounded-lg shadow-md p-4 md:p-5 font-serifJapanese flex-col items-center self-start md:ml-12 ml-0">
-            <h2 className="text-lg font-semibold mb-3 border-b border-black/20 pb-1 w-full text-center">
+          <aside className=" hidden md:flex w-full md:w-64 bg-white border border-black/20 rounded-lg shadow-md p-4 md:p-5 font-sans flex-col items-center self-start md:ml-12 ml-0">
+            <h2 className="text-lg font-bold mb-3 border-b border-black/20 pb-1 w-full text-center">
               Sentence of the Day
             </h2>
             {sentenceOfTheDay ? (
@@ -106,12 +106,11 @@ export default function Home() {
         </div>
         <div className=" flex justify-center px-2 md:px-0 md:mt-6">
           <div className=" max-w-full md:max-w-3xl bg-white border border-black/20 rounded-lg shadow-lg p-6 md:p-8 text-center bg-opacity-90 z-10">
-            <h1 className="text-3xl md:text-5xl font-extrabold mb-4 tracking-tight">
-              Welcome to{" "}
-              <span className="text-primary font-serifJapanese">AI Sensei</span>{" "}
+            <h1 className="text-3xl md:text-5xl font-extrabold mb-4 tracking-tight font-sans">
+              Welcome to <span className="font-extrabold">AI Sensei</span>{" "}
               <span>-🌸-</span>
             </h1>
-            <p className="hidden md:block text-base md:text-lg text-black/80 mb-8 leading-relaxed font-japanese">
+            <p className="hidden md:block text-base md:text-lg text-black/80 mb-8 leading-relaxed font-sans">
               Your personalized AI-powered Japanese language teacher.
               <br />
               Explore lessons, AI teacher, and real-time dictionary support to
@@ -121,20 +120,20 @@ export default function Home() {
             <div className="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-6">
               <Link
                 to="/ai-teacher"
-                className="px-6 py-3 rounded-md bg-black text-white font-semibold shadow-md hover:bg-gray-900 transition-transform duration-150 hover:scale-[1.05]"
+                className="px-6 py-3 rounded-md bg-black text-white font-semibold shadow-md hover:bg-gray-900 transition-all duration-200 hover:scale-[1.05] font-sans"
               >
                 Talk to AI Teacher
               </Link>
               <Link
                 to="/roadmaps"
-                className="px-6 py-3 rounded-md border border-black text-black font-semibold hover:bg-black hover:text-white transition-transform duration-150 hover:scale-[1.05]"
+                className="px-6 py-3 rounded-md border-2 border-black text-black font-semibold hover:bg-black hover:text-white transition-all duration-200 hover:scale-[1.05] font-sans"
               >
                 Browse Roadmaps
               </Link>
             </div>
           </div>
         </div>
-        <div className="  text-sm text-black/60 font-serifJapanese text-center py-6 select-none">
+        <div className="  text-sm text-black/60 font-sans text-center py-6 select-none">
           🌸 頑張ってください! (Good luck with your studies!)
         </div>
 
@@ -142,7 +141,7 @@ export default function Home() {
       </main>
 
       <footer className=" fixed bottom-0 left-0 right-0 bg-black text-white py-1.5 z-50 select-none w-full">
-        <div className="  max-w-md mx-auto px-4 pb-1.5 text-center font-serifJapanese text-base sm:text-sm leading-snug">
+        <div className="  max-w-md mx-auto px-4 pb-1.5 text-center font-sans text-base sm:text-sm leading-snug">
           <span className="block mb-0.5 text-lg sm:text-base font-semibold">
             「千里の道も一歩から」
           </span>

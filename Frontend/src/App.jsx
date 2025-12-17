@@ -54,9 +54,9 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background-pink font-japanese text-text-primary">
+      <div className="flex items-center justify-center min-h-screen bg-white font-sans text-black">
         <svg
-          className="animate-spin h-12 w-12 text-secondary"
+          className="animate-spin h-12 w-12 text-black"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -83,7 +83,7 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-background-pink font-japanese text-text-primary">
+      <div className="min-h-screen bg-white font-sans text-black">
         <Navbar />
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
